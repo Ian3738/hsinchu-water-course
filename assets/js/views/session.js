@@ -4,7 +4,7 @@ import { L, t, getLang } from '../i18n.js';
 import { SESSIONS, BY_ID } from '../../data/course.js';
 import { BANNED } from '../../data/ui.js';
 import { CONFIG } from '../../../config.js';
-import { state, castVote, voteTally, subscribe, setClass, saveWork, myWork, allWork } from '../store.js';
+import { state, castVote, voteTally, subscribe, setClass, saveWork, myWork, allWork, addTalk, talksFor, removeTalk, addReply, repliesFor } from '../store.js';
 import { SLOTS, BY_SLOT } from '../../data/personas.js';
 import { PUZZLES } from '../../data/puzzles.js';
 import { sceneStep, gateStep, unlocked } from '../gate.js';
@@ -36,7 +36,7 @@ export default function session(root, { arg, params }) {
   push(sceneStep(s.id, zh));
 
   // 中間：證據與任務
-  s.blocks.forEach(b => push(renderBlock(b, s, zh, offs)));
+  s.blocks.forEach((b, bi) => push(renderBlock(b, s, zh, offs, bi)));
 
   // 倒數第二張：鎖。沒解開不能往下一關。
   let gateAt = -1;
@@ -125,7 +125,8 @@ export default function session(root, { arg, params }) {
 
 /* ============================================================ */
 
-function renderBlock(b, s, zh, offs) {
+function renderBlock(b, s, zh, offs, bi = 0) {
+  const qid = `${s.id}-b${bi}`;
   switch (b.type) {
 
     /* ---------- 影片 ---------- */
@@ -169,12 +170,14 @@ function renderBlock(b, s, zh, offs) {
           h('p.card__title', { text: L(sd.k) }),
           h('p.muted', { style: { margin: 0, fontSize: 'var(--t-sm)' }, text: L(sd.v) }),
         ]))));
+      // 問了就要有地方回答，不然只是投影片
+      kids.push(talkBox(qid, L(b.q), zh, offs));
       return wrap(kids);
     }
 
     /* ---------- 投票 ---------- */
     case 'vote':
-      return wrap([voteWidget(b, zh, offs)]);
+      return wrap([voteWidget(b, zh, offs), talkBox(qid, L(b.q), zh, offs)]);
 
     /* ---------- 散文 ---------- */
     case 'prose': {
@@ -425,5 +428,113 @@ function reflectStep(s, zh) {
     ]),
   ]);
   save();
+  return box;
+}
+
+/* ============================================================
+   留言：掛在提問底下，全班看得到彼此寫了什麼
+   ============================================================ */
+function talkBox(qid, question, zh, offs) {
+  const box = h('.talk');
+
+  const ta = h('textarea.textarea', {
+    placeholder: zh ? '寫下你的想法。不用完整，先寫再說。' : 'Your thought. It does not have to be finished.',
+  });
+
+  const post = () => {
+    const v = ta.value.trim();
+    if (!v) { toast(zh ? '還沒寫東西' : 'Nothing written'); ta.focus(); return; }
+    addTalk(qid, v);
+    ta.value = '';
+    toast(zh ? '留上去了' : 'Posted');
+  };
+  ta.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); post(); }
+  });
+
+  const list = h('.talk__list');
+  const count = h('span.mono', { style: { fontSize: 'var(--t-micro)', color: 'var(--fg-3)' } });
+
+  const paint = () => {
+    const rows = talksFor(qid);
+    count.textContent = rows.length
+      ? `${rows.length} ${zh ? '則想法' : 'thoughts'}`
+      : (zh ? '還沒有人留' : 'none yet');
+    clear(list);
+    if (!rows.length) {
+      list.append(h('p.talk__empty', { text: zh
+        ? '第一個留的人最勇敢。想法還沒想好也可以先丟上來。'
+        : 'The first one takes the most nerve. Unfinished thoughts are welcome.' }));
+      return;
+    }
+    rows.forEach(r => {
+      const mine = r.by === state.me.id;
+      const reps = repliesFor(qid, r.ts);
+      const repBox = h('.talk__reps', reps.map(x => h('.talk__rep', [
+        h('span.talk__who', { text: (x.name || (zh ? '匿名' : 'anon')) + (x.group ? '・' + x.group : '') }),
+        h('span', { text: x.text }),
+      ])));
+
+      const repIn = h('input.input', {
+        placeholder: zh ? '給他一句回饋……' : 'Reply to this...',
+        style: { fontSize: 'var(--t-xs)', padding: 'var(--s2)' },
+      });
+      const sendRep = () => {
+        const v = repIn.value.trim();
+        if (!v) return;
+        addReply(qid, r.ts, v);
+        repIn.value = '';
+      };
+      repIn.addEventListener('keydown', e => { if (e.key === 'Enter') sendRep(); });
+
+      const repForm = h('.talk__repform.hide', [
+        repIn,
+        h('button.btn.btn--sm', { type: 'button', onclick: sendRep }, zh ? '送出' : 'Send'),
+      ]);
+
+      list.append(h('.talk__item', { data: { mine: String(mine) } }, [
+        h('.talk__who', [
+          h('span', { text: r.name || (zh ? '匿名' : 'anon') }),
+          r.group ? h('span', { text: '・' + r.group }) : null,
+          h('span.grow'),
+          h('button.btn.btn--sm.btn--ghost', {
+            type: 'button',
+            style: { minHeight: '18px', padding: '0 5px', fontSize: '10px' },
+            onclick: () => repForm.classList.toggle('hide'),
+          }, reps.length ? `${zh ? '回饋' : 'replies'} ${reps.length}` : (zh ? '回饋' : 'Reply')),
+          mine ? h('button.btn.btn--sm.btn--ghost', {
+            type: 'button',
+            style: { minHeight: '18px', padding: '0 4px', fontSize: '10px' },
+            onclick: () => removeTalk(qid, r.ts),
+          }, zh ? '收回' : 'Remove') : null,
+        ].filter(Boolean)),
+        h('.talk__body', { text: r.text }),
+        reps.length ? repBox : null,
+        repForm,
+      ].filter(Boolean)));
+    });
+    list.scrollTop = list.scrollHeight;
+  };
+
+  box.append(
+    h('.talk__head', [
+      h('span.mono', {
+        style: { fontSize: 'var(--t-micro)', letterSpacing: '.18em', color: 'var(--water-lit)' },
+        text: zh ? '留下你的想法' : 'LEAVE A THOUGHT',
+      }),
+      count,
+    ]),
+    h('.talk__form', [
+      ta,
+      h('.row.row--tight', [
+        h('button.btn.btn--sm.btn--primary', { type: 'button', onclick: post }, zh ? '留言' : 'Post'),
+        h('span.muted', { style: { fontSize: 'var(--t-micro)' }, text: zh ? '⌘／Ctrl + Enter 也可以送出' : '⌘/Ctrl + Enter also posts' }),
+      ]),
+    ]),
+    list,
+  );
+
+  paint();
+  offs.push(subscribe(w => { if (w === 'work') paint(); }));
   return box;
 }

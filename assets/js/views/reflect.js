@@ -17,7 +17,7 @@ export default function reflect(root) {
     eyebrow(zh ? '回頭看' : 'LOOK BACK'),
     h('h1.ask.ask--wide', { text: zh ? '你這一路留下了什麼' : 'What you left behind along the way' }),
     h('p.lede', { text: zh
-      ? '下面是你自己寫過、畫過、投過的東西，照順序排好。先看完，再回答最下面那三題。'
+      ? '你寫過、畫過、投過的東西都在下面，照順序排好。先看完，再回答最後三題。'
       : 'Everything you wrote, drew and voted, in order. Read it first, then answer the three questions at the bottom.' }),
   ]));
 
@@ -118,7 +118,7 @@ export default function reflect(root) {
       trail.append(h('.card.card--clay', [
         h('p.card__title', { text: zh ? '這裡還是空的' : 'Nothing here yet' }),
         h('p.muted', { style: { margin: 0, fontSize: 'var(--t-sm)' }, text: zh
-          ? '先去上課、在畫布貼幾則、拉一次模擬器。你留下的東西會自己排到這裡。'
+          ? '先去上課，在畫布貼幾則，拉一次模擬器。你留下的東西會自己排到這裡。'
           : 'Take a session, post to the canvas, run the simulator. What you leave shows up here.' }),
         h('a.btn.btn--primary', { href: '#/s/s0' }, zh ? '從第 0 節開始' : 'Start at session 0'),
       ]));
@@ -186,7 +186,7 @@ export default function reflect(root) {
       h('p.muted', { style: { margin: 0, fontSize: 'var(--t-xs)' }, text: s.tag[zh ? 'zh' : 'en'] }),
     ]))),
     h('p.note-line', { text: zh
-      ? '他們都是被 AI 代為發言的。真正該問的人，還在外面。'
+      ? '他們的話都是 AI 代講的。真正該問的人，還在外面。'
       : 'Every one of them was voiced by an AI. The people who should actually be asked are still outside.' }),
   ]));
 

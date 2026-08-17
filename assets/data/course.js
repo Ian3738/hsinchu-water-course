@@ -157,7 +157,7 @@ export const SESSIONS = [
       body: { zh: '拉動取水閘門，看下游剩下多少。', en: 'Drag the diversion gate and watch what is left downstream.' } },
 
     { type: 'list',
-      head: { zh: '兩件值得注意的事', en: 'Two things worth noticing' },
+      head: { zh: '有兩件事要看清楚', en: 'Two things worth noticing' },
       items: [
         { t: { zh: '這條渠道本來是為農田挖的', en: 'The canal was dug for farmland' },
           d: { zh: '很久以前挖來灌溉稻田，現在也供水給水庫。', en: 'It was built long ago to irrigate rice fields. Now it also feeds the reservoir.' } },
@@ -392,7 +392,7 @@ export const SESSIONS = [
       ] },
 
     { type: 'facts',
-      head: { zh: '兩個常被跳過的細節', en: 'Two details that get skipped' },
+      head: { zh: '兩件沒寫在數字裡的事', en: 'Two details that get skipped' },
       tone: 'clay',
       items: [
         { n: { zh: '只有一半多', en: 'Just over half' }, l: { zh: '當時新埔家戶有自來水的比例', en: 'of Xinpu households had piped water then' } },
@@ -489,7 +489,7 @@ export const SESSIONS = [
         { zh: '賠了錢就算還清了', en: 'Paying for it settles the debt' },
         { zh: '回不去的東西，賠再多也沒還清', en: "If it can't be restored, nothing is settled" },
       ],
-      body: { zh: '借跟拿的差別，不在於有沒有還，而在於對方有沒有機會說話。溪不會講話，被徵地的人不在場，新埔人是事後才知道的。新竹的水，其實是一個關於誰有資格決定的故事。',
+      body: { zh: '借跟拿的差別，不在於有沒有還，而在於對方有沒有機會說話。溪不會講話，被徵地的人不在場，新埔人是事後才知道的。新竹的水，其實是誰有資格決定的問題。',
               en: 'Borrowing differs from taking not in whether it is repaid, but in whether the other side had a say. The river cannot speak, the landowners were not in the room, and Xinpu residents found out afterwards. Hsinchu&rsquo;s water is a story about who gets to decide.' },
       gap: { zh: '這個例子也有漏洞：住在城裡的我們，有被問過嗎？', en: 'This example has a gap too: were those of us in the city ever asked?' } },
 

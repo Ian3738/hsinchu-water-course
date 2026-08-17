@@ -5,8 +5,10 @@ import { SESSIONS } from '../../data/course.js';
 import { SLOTS } from '../../data/personas.js';
 import {
   state, setClass, subscribe, sync, notesList, snapshot,
-  importSnapshot, wipeLocal, allWork,
+  importSnapshot, wipeLocal, allWork, allTalks, repliesFor,
 } from '../store.js';
+import { countWordsIn, cloudEl } from '../wordcloud.js';
+import { SESSIONS as ALL_SESSIONS } from '../../data/course.js';
 import { engine } from '../agent.js';
 
 /* 話語編碼。自動標記只是初篩，正式分析仍須人工複核。
@@ -80,6 +82,89 @@ export default function teacher(root) {
       ]),
     ]),
   ]));
+
+  /* ============================================================
+     想法牆：全班在提問底下留的東西，即時進來。
+     上面是文字雲（投影用），下面是每一則原文（老師要看得到誰寫了什麼）。
+     ============================================================ */
+  const wall = h('section.wrap--wide.section--tight.stack');
+  root.append(wall);
+
+  let wallFilter = 'all';   // all 或某個 qid
+
+  const paintWall = () => {
+    clear(wall);
+    const talks = allTalks();
+    const qids = [...new Set(talks.map(x => x.qid))];
+    const rows = wallFilter === 'all' ? talks : talks.filter(x => x.qid === wallFilter);
+
+    /* 題目切換 */
+    const qLabel = qid => {
+      const m = /^s(\d+)-b(\d+)$/.exec(qid || '');
+      if (!m) return qid;
+      const ses = ALL_SESSIONS.find(x => x.n === Number(m[1]));
+      return `${String(m[1]).padStart(2, '0')}　${ses ? ses.title[zh ? 'zh' : 'en'] : ''}`;
+    };
+
+    wall.append(
+      h('.row.row--between', [
+        eyebrow(zh ? '想法牆・即時' : 'THE WALL · LIVE'),
+        h('.row.row--tight', [
+          h('span.pill', { data: { tone: 'live' } }, [h('span.pill__dot'),
+            `${talks.length} ${zh ? '則想法' : 'thoughts'}`]),
+          h('span.pill', [h('span.pill__dot'),
+            `${new Set(talks.map(x => x.by)).size} ${zh ? '人參與' : 'contributors'}`]),
+        ]),
+      ]),
+    );
+
+    if (qids.length > 1) {
+      const sel = h('select.select', { style: { maxWidth: '320px' } }, [
+        h('option', { value: 'all', selected: wallFilter === 'all' }, zh ? '全部題目' : 'All questions'),
+        ...qids.map(q => h('option', { value: q, selected: wallFilter === q }, qLabel(q))),
+      ]);
+      sel.addEventListener('change', () => { wallFilter = sel.value; paintWall(); });
+      wall.append(sel);
+    }
+
+    /* 文字雲 */
+    const words = countWordsIn(rows.map(r => r.text), 44);
+    wall.append(cloudEl(h, words));
+    if (words.length) {
+      wall.append(h('p.note-line', {
+        text: zh
+          ? '字越大代表越多人提到。這是用 n-gram 算的，不是精確斷詞——當成「大家的注意力在哪」來看就好。'
+          : 'Larger means more often mentioned. Computed with n-grams, not a real segmenter; read it as where attention is, not as precise terms.',
+      }));
+    }
+
+    /* 每一則原文 */
+    if (!rows.length) {
+      wall.append(h('p.muted', { text: zh ? '學生還沒開始留想法。' : 'No thoughts yet.' }));
+      return;
+    }
+    wall.append(
+      eyebrow(zh ? '每一則' : 'EVERY THOUGHT'),
+      h('.cols-2', rows.slice().reverse().map(r => {
+        const reps = repliesFor(r.qid, r.ts);
+        return h('.card.stack-sm', [
+          h('.row.row--between', [
+            h('span.mono', { style: { fontSize: 'var(--t-micro)', color: 'var(--water-lit)' },
+                             text: (r.name || (zh ? '匿名' : 'anon')) + (r.group ? '・' + r.group : '') }),
+            h('span.mono', { style: { fontSize: '10px', color: 'var(--fg-3)' }, text: qLabel(r.qid) }),
+          ]),
+          h('p', { style: { margin: 0, fontSize: 'var(--t-sm)', lineHeight: 1.65 }, text: r.text }),
+          reps.length ? h('.talk__reps', reps.map(x => h('.talk__rep', [
+            h('span.talk__who', { text: (x.name || '') + (x.group ? '・' + x.group : '') }),
+            h('span', { text: x.text }),
+          ]))) : null,
+        ].filter(Boolean));
+      })),
+    );
+  };
+
+  paintWall();
+  offs.push(subscribe(w => { if (w === 'work') paintWall(); }));
 
   /* ---------- 即時檢視 ---------- */
   const live = h('section.wrap--wide.section--tight.stack');

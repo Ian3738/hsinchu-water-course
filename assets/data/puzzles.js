@@ -63,7 +63,7 @@ export const PUZZLES = {
         en: 'Irrigation needs 28 and the park needs 42, which is 70. What is left downstream? Now check the fish threshold again.',
       },
       after: {
-        zh: '對，做不到。這條溪不夠同時滿足所有人——不管你怎麼拉那個閘門。所以真正的問題不是「怎麼調」，是「誰先被犧牲，以及那個人有沒有在場」。',
+        zh: '對，做不到。這條溪不夠同時滿足所有人。閘門怎麼拉都一樣。所以真正的問題不是怎麼調，是誰先被犧牲，以及那個人有沒有在場。',
         en: 'Correct: it cannot be done. The river cannot satisfy everyone at once, however you set the gate. So the real question is not how to tune it, but who gets cut first, and whether that party was in the room.',
       },
     },
@@ -73,7 +73,7 @@ export const PUZZLES = {
   s2: {
     caseNo: '02',
     scene: {
-      zh: '一張泛黃的水利圖，日治時期繪製。圖上標的是稻田與圳路，沒有水庫——那時候還沒有。但今天同一條圳裡的水，有一部分流進了水庫。沒有人記得是哪一天開始的。',
+      zh: '一張泛黃的水利圖，日治時期繪製。圖上標的是稻田與圳路，沒有水庫。那時候還沒有。但今天同一條圳裡的水，有一部分流進了水庫。沒有人記得是哪一天開始的。',
       en: 'A yellowed irrigation map from the Japanese colonial period. It marks paddies and canals, no reservoir; there was none then. Yet today part of that same canal feeds a reservoir. Nobody remembers which day it started.',
     },
     hunt: { zh: '把水今天走的路排出來。', en: "Lay out the route the water takes today." },
@@ -90,7 +90,7 @@ export const PUZZLES = {
       answer: ['shangping', 'weir', 'canal', 'baoshan', 'tap'],
       hint: { zh: '水先被攔下來，才會走進渠道。', en: 'It is held back before it enters the canal.' },
       after: {
-        zh: '這條路中間有一段，是別人為了自己的田挖的。水改道去水庫的時候，沒有人回去問過那些人。這件事本身不違法——它只是沒有被問過。',
+        zh: '這條路中間有一段，是別人為了自己的田挖的。水改道去水庫的時候，沒有人回去問過那些人。這件事不違法。只是沒有人問過。',
         en: 'One stretch of that route was dug by people for their own fields. When the water was rerouted to the reservoir, nobody went back to ask them. Nothing illegal happened. It simply was never asked.',
       },
     },
@@ -110,7 +110,7 @@ export const PUZZLES = {
       answer: ['157'],
       hint: { zh: '四個鄉鎮，一個三位數。', en: 'Four townships, a three-digit number.' },
       after: {
-        zh: '你查得到面積、查得到造價、查得到每日增供多少噸。你查不到的是那些人搬去了哪裡。公告寫的是地，不是人——這就是為什麼畫布上要留一個位置給他們。',
+        zh: '你查得到面積、查得到造價、查得到每日增供多少噸。你查不到的是那些人搬去了哪裡。公告寫的是地，不是人。所以畫布上留了一個位置給他們。',
         en: 'You can look up the area, the cost, the daily yield. What you cannot look up is where those people went. The notice records land, not people. That is why a position on the canvas is kept for them.',
       },
     },
@@ -137,7 +137,7 @@ export const PUZZLES = {
       ],
       hint: { zh: '水是從上坪溪引過來的，上坪溪屬於哪一條大河？', en: 'The water is diverted from the Shangping. Which river system is that?' },
       after: {
-        zh: '合法、有效率、成本最低——三件事都成立。可是「地形適宜」這句話裡面沒有人。適宜誰？住在那個谷地旁邊的人，是什麼時候知道的？',
+        zh: '合法、有效率、成本最低，三件事都成立。可是「地形適宜」這句話裡面沒有人。適宜誰？住在那個谷地旁邊的人，是什麼時候知道的？',
         en: 'Legal, efficient, cheapest: all three hold. But "suitable terrain" contains no people. Suitable for whom? And when did those living beside that valley find out?',
       },
     },
@@ -171,7 +171,7 @@ export const PUZZLES = {
   s6: {
     caseNo: '06',
     scene: {
-      zh: '一封沒有收件人的信，放在檔案夾最後。信的開頭寫著：「你好，我不知道你叫什麼名字，也不知道你會不會讀到這封信。我們現在正在決定一件跟你有關的事——我們要抽掉一些地下水。等你出生的時候，它可能還沒補回來。」',
+      zh: '一封沒有收件人的信，放在檔案夾最後。信的開頭寫著：「你好，我不知道你叫什麼名字，也不知道你會不會讀到這封信。我們正在決定一件跟你有關的事。我們要抽掉一些地下水。等你出生的時候，它可能還沒補回來。」',
       en: 'A letter with no addressee, last in the folder. It opens: "Hello. I do not know your name, or whether you will read this. We are deciding something that concerns you: we are going to pump some groundwater. By the time you are born, it may not have come back."',
     },
     hunt: { zh: '這一關的鎖不在資料裡，在畫布上。', en: 'This lock is not in the evidence. It is on the canvas.' },
@@ -182,7 +182,7 @@ export const PUZZLES = {
         en: 'Post a note on the canvas speaking for a party who is not present, and tick "this names someone not in the room". Then come back.',
       },
       needAbsent: 1,
-      hint: { zh: '溪、搬走的人、還沒出生的人——挑一個，用他的口氣講一句。', en: 'The creek, those who moved away, those not yet born. Pick one and speak as them.' },
+      hint: { zh: '溪、搬走的人、還沒出生的人。挑一個，用他的口氣講一句。', en: 'The creek, those who moved away, those not yet born. Pick one and speak as them.' },
       after: {
         zh: '你剛剛替一個不會說話的對象說了一句話。這件事本身有個問題：你怎麼知道他會這樣說？這門課不會給你答案，但你從現在開始，會注意到誰在替誰說話。',
         en: 'You just spoke for someone who cannot speak. There is a problem inside that act: how do you know they would say it that way? This course will not resolve it, but from now on you will notice who is speaking for whom.',
@@ -206,7 +206,7 @@ export const PUZZLES = {
       lab: 'table3',
       hint: { zh: '第三欄最難，因為要找的是不在文章裡的東西。', en: 'The third column is hardest: you are looking for what is not there.' },
       after: {
-        zh: '三份都沒說謊，可是三份都留了人在外面。接下來換你寫——你會把誰留在外面？',
+        zh: '三份都沒說謊，可是三份都留了人在外面。接下來換你寫。你會把誰留在外面？',
         en: 'None of them lied, and all three left someone out. Now it is your turn to write. Whom will you leave out?',
       },
     },
@@ -247,7 +247,7 @@ export const PUZZLES = {
   s9: {
     caseNo: '09',
     scene: {
-      zh: '一封策展邀請函。「我們要辦一個關於新竹的展，只收一件作品。條件只有一個：拿到它的人要問出一個問題，而不是覺得新竹很漂亮。」',
+      zh: '一封策展邀請函。「我們要辦一場新竹的展，只收一件作品。條件只有一條：拿到它的人要問出問題，而不是覺得新竹很漂亮。」',
       en: 'A curator\'s invitation. "We are mounting a show about Hsinchu and taking one object. One condition: whoever holds it must be left with a question, not with the impression that Hsinchu is pretty."',
     },
     hunt: { zh: '去做東西那一頁，把三個科目寫清楚。', en: 'Go to the make page and locate three subjects.' },

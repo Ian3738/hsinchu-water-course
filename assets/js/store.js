@@ -280,3 +280,66 @@ export function wipeLocal() {
   SYNCED.forEach(part => { state[part] = {}; localStorage.removeItem(lsKey(part)); });
   emit('wipe');
 }
+
+/* ============================================================
+   留言 — 掛在某個提問底下的想法
+   存在 work 裡，key 是 talk-<問題>__<使用者>-<時間>，
+   所以同一個人可以留多則，而且安全規則不用另外開路徑。
+   ============================================================ */
+export function addTalk(qid, text) {
+  const body = String(text || '').trim();
+  if (!body) return null;
+  const key = `talk-${qid}__${state.me.id}-${Date.now().toString(36)}`;
+  const row = {
+    qid, text: body.slice(0, 1000),
+    by: state.me.id,
+    name: state.me.name || '',
+    group: state.me.group || '',
+    ts: Date.now(),
+  };
+  put('work', key, row);
+  return row;
+}
+
+export function talksFor(qid) {
+  return Object.entries(state.work)
+    .filter(([k]) => k.startsWith(`talk-${qid}__`))
+    .map(([, v]) => v)
+    .sort((a, b) => (a.ts || 0) - (b.ts || 0));
+}
+
+export function removeTalk(qid, ts) {
+  const key = Object.keys(state.work).find(k =>
+    k.startsWith(`talk-${qid}__`) && state.work[k].ts === ts && state.work[k].by === state.me.id);
+  if (key) put('work', key, null);
+}
+
+/* ---------- 對別人的想法給回饋 ---------- */
+export function addReply(qid, targetTs, text) {
+  const body = String(text || '').trim();
+  if (!body) return null;
+  const key = `rep-${qid}-${targetTs}__${state.me.id}-${Date.now().toString(36)}`;
+  const row = {
+    qid, target: targetTs, text: body.slice(0, 500),
+    by: state.me.id, name: state.me.name || '', group: state.me.group || '',
+    ts: Date.now(),
+  };
+  put('work', key, row);
+  return row;
+}
+
+export function repliesFor(qid, targetTs) {
+  return Object.entries(state.work)
+    .filter(([k]) => k.startsWith(`rep-${qid}-${targetTs}__`))
+    .map(([, v]) => v)
+    .sort((a, b) => (a.ts || 0) - (b.ts || 0));
+}
+
+/** 全班所有留言，老師端用 */
+export function allTalks() {
+  return Object.entries(state.work)
+    .filter(([k]) => k.startsWith('talk-'))
+    .map(([, v]) => v)
+    .filter(v => v && v.text)
+    .sort((a, b) => (a.ts || 0) - (b.ts || 0));
+}

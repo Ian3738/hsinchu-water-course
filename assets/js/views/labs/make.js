@@ -9,6 +9,7 @@ import { saveWork, myWork, allWork, castVote, voteTally, subscribe, state } from
 export function route(root) {
   const zh = getLang() === 'zh';
   const saved = myWork('t0') || {};
+  const offs = [];
 
   root.append(h('section.wrap--wide.section--tight.stack.enter', [
     eyebrow('TASK 0 · ' + (zh ? '我一開始以為' : 'WHAT I THOUGHT AT THE START')),
@@ -16,107 +17,253 @@ export function route(root) {
       ? '水從哪裡開始，怎麼跑到你家水龍頭？'
       : 'Where does the water start, and how does it reach your tap?' }),
     h('p.lede', { text: zh
-      ? '不准查手機。用你現在腦袋裡有的東西畫。畫錯沒關係，第六節我們會回頭看這張。'
+      ? '不准查手機。用你現在腦袋裡有的東西畫。畫錯沒關係——第六節我們會回頭看這張。'
       : 'No phones. Draw from what you know right now. Being wrong is fine; we come back to this in session six.' }),
   ]));
 
-  /* ---- 畫布 ---- */
-  const cv = h('canvas', { style: { width: '100%', height: 'auto', background: '#F7F4EF', borderRadius: 'var(--r-md)', touchAction: 'none', cursor: 'crosshair' } });
-  const W = 1200, H = 675;
-  cv.width = W; cv.height = H;
-  const ctx = cv.getContext('2d');
-  ctx.fillStyle = '#F7F4EF'; ctx.fillRect(0, 0, W, H);
-  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  /* ---------- 白畫布 ---------- */
+  const W = 1600, H = 1000;
+  const cv = h('canvas.draw__paper', { width: W, height: H });
+  const ctx = cv.getContext('2d', { willReadFrequently: true });
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
 
-  const strokes = [];
-  let cur = null, color = '#14313F', width = 4;
+  const white = () => { ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0, 0, W, H); };
+  white();
 
-  if (saved.img) {
-    const img = new Image();
-    img.onload = () => ctx.drawImage(img, 0, 0, W, H);
-    img.src = saved.img;
-  }
+  const strokes = [];      // 每一筆：{ c, w, pts }
+  let redo = [];
+  let cur = null;
+  let ink = '#14313F';
+  let size = 5;
+
+  const redraw = () => {
+    white();
+    strokes.forEach(st => {
+      ctx.strokeStyle = st.c;
+      ctx.lineWidth = st.w;
+      ctx.globalCompositeOperation = st.c === 'erase' ? 'destination-out' : 'source-over';
+      if (st.c === 'erase') ctx.strokeStyle = 'rgba(0,0,0,1)';
+      ctx.beginPath();
+      st.pts.forEach((pt, i) => (i ? ctx.lineTo(pt.x, pt.y) : ctx.moveTo(pt.x, pt.y)));
+      if (st.pts.length === 1) ctx.lineTo(st.pts[0].x + .1, st.pts[0].y);
+      ctx.stroke();
+    });
+    ctx.globalCompositeOperation = 'source-over';
+  };
 
   const pos = e => {
     const r = cv.getBoundingClientRect();
     return { x: (e.clientX - r.left) / r.width * W, y: (e.clientY - r.top) / r.height * H };
   };
-  const draw = () => {
-    ctx.fillStyle = '#F7F4EF'; ctx.fillRect(0, 0, W, H);
-    strokes.forEach(s => {
-      ctx.strokeStyle = s.c; ctx.lineWidth = s.w;
-      ctx.beginPath();
-      s.pts.forEach((p, i) => i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y));
-      ctx.stroke();
-    });
-  };
 
   cv.addEventListener('pointerdown', e => {
     cv.setPointerCapture(e.pointerId);
-    cur = { c: color, w: width, pts: [pos(e)] };
-    strokes.push(cur);
+    cur = { c: ink, w: size * (ink === 'erase' ? 4 : 1), pts: [pos(e)] };
+    strokes.push(cur); redo = [];
+    redraw();
   });
-  cv.addEventListener('pointermove', e => { if (!cur) return; cur.pts.push(pos(e)); draw(); });
-  cv.addEventListener('pointerup', () => { cur = null; autosave(); });
-  cv.addEventListener('pointercancel', () => { cur = null; });
+  cv.addEventListener('pointermove', e => {
+    if (!cur) return;
+    cur.pts.push(pos(e));
+    redraw();
+  });
+  const endStroke = () => { if (cur) { cur = null; autosave(); } };
+  cv.addEventListener('pointerup', endStroke);
+  cv.addEventListener('pointercancel', endStroke);
+  cv.addEventListener('pointerleave', endStroke);
 
-  const swatch = (c, label) => h('button.btn.btn--sm', {
+  /* ---------- 工具 ---------- */
+  const INKS = [
+    { c: '#14313F', zh: '水路', en: 'Water' },
+    { c: '#D97742', zh: '人蓋的', en: 'Built' },
+    { c: '#1B6B80', zh: '不確定', en: 'Unsure' },
+    { c: '#2E8B6F', zh: '田地', en: 'Fields' },
+    { c: 'erase',   zh: '橡皮擦', en: 'Eraser' },
+  ];
+  const inkBtns = INKS.map(i => h('button.draw__ink', {
     type: 'button',
-    style: { borderColor: c, color: c },
-    onclick: () => { color = c; toast(label); },
-  }, label);
+    'aria-pressed': String(i.c === ink),
+    title: zh ? i.zh : i.en,
+    style: i.c === 'erase'
+      ? { background: 'repeating-conic-gradient(#eee 0 25%, #fff 0 50%) 0/10px 10px' }
+      : { background: i.c },
+    onclick: () => {
+      ink = i.c;
+      inkBtns.forEach(b => b.setAttribute('aria-pressed', String(b.title === (zh ? i.zh : i.en))));
+    },
+  }));
 
-  const tools = h('.row.row--tight', [
-    swatch('#14313F', zh ? '水路' : 'Water'),
-    swatch('#D97742', zh ? '人的東西' : 'Built'),
-    swatch('#1B6B80', zh ? '不確定' : 'Unsure'),
-    h('button.btn.btn--sm', { type: 'button', onclick: () => { strokes.pop(); draw(); autosave(); } }, zh ? '退一步' : 'Undo'),
+  const sizeBtns = [3, 5, 10, 18].map(n => h('button.btn.btn--sm', {
+    type: 'button', 'aria-pressed': String(n === size),
+    onclick: e => {
+      size = n;
+      [...e.target.parentElement.children].forEach(b => b.setAttribute('aria-pressed', String(b === e.target)));
+    },
+  }, String(n)));
+
+  const tools = h('.draw__tools', [
+    ...inkBtns,
+    h('span', { style: { width: '1px', height: '24px', background: 'var(--rule-paper)' } }),
+    h('.draw__size', sizeBtns),
+    h('span.grow'),
+    h('button.btn.btn--sm', {
+      type: 'button',
+      onclick: () => { if (strokes.length) { redo.push(strokes.pop()); redraw(); autosave(); } },
+    }, zh ? '退一步' : 'Undo'),
+    h('button.btn.btn--sm', {
+      type: 'button',
+      onclick: () => { if (redo.length) { strokes.push(redo.pop()); redraw(); autosave(); } },
+    }, zh ? '再做一次' : 'Redo'),
     h('button.btn.btn--sm.btn--ghost', {
       type: 'button',
-      onclick: () => { if (confirm(zh ? '整張清掉？' : 'Clear the whole thing?')) { strokes.length = 0; draw(); autosave(); } },
+      onclick: () => {
+        if (!confirm(zh ? '整張清掉？' : 'Clear the whole thing?')) return;
+        strokes.length = 0; redo = []; redraw(); autosave();
+      },
     }, zh ? '清空' : 'Clear'),
   ]);
 
-  /* ---- 照片上傳（拍紙本用）---- */
+  /* ---------- 上傳照片（畫在紙上的人）---------- */
   const file = h('input', { type: 'file', accept: 'image/*', style: { display: 'none' } });
   file.addEventListener('change', () => {
     const f = file.files[0]; if (!f) return;
     const img = new Image();
     img.onload = () => {
-      strokes.length = 0;
-      ctx.fillStyle = '#F7F4EF'; ctx.fillRect(0, 0, W, H);
-      const s = Math.min(W / img.width, H / img.height);
-      ctx.drawImage(img, (W - img.width * s) / 2, (H - img.height * s) / 2, img.width * s, img.height * s);
+      strokes.length = 0; redo = [];
+      white();
+      const sc = Math.min(W / img.width, H / img.height);
+      ctx.drawImage(img, (W - img.width * sc) / 2, (H - img.height * sc) / 2, img.width * sc, img.height * sc);
+      // 照片直接當底圖，之後的筆畫疊在上面
+      baseImage = cv.toDataURL('image/jpeg', 0.82);
       autosave();
-      toast(zh ? '照片放上去了' : 'Photo added');
+      toast(zh ? '照片放上去了，可以直接在上面畫' : 'Photo added; draw on top of it');
+      URL.revokeObjectURL(img.src);
     };
     img.src = URL.createObjectURL(f);
+    file.value = '';
   });
+  let baseImage = saved.base || null;
 
-  const line = h('textarea.textarea', { value: saved.line || '', placeholder: zh ? '加一句話說明你畫的東西' : 'One sentence about what you drew' });
-  line.addEventListener('input', () => autosave());
+  if (baseImage) {
+    const im = new Image();
+    im.onload = () => { ctx.drawImage(im, 0, 0, W, H); redrawWithBase(); };
+    im.src = baseImage;
+  }
+  function redrawWithBase() {
+    if (!baseImage) { redraw(); return; }
+    const im = new Image();
+    im.onload = () => {
+      white();
+      ctx.drawImage(im, 0, 0, W, H);
+      strokes.forEach(st => {
+        ctx.strokeStyle = st.c === 'erase' ? 'rgba(0,0,0,1)' : st.c;
+        ctx.lineWidth = st.w;
+        ctx.globalCompositeOperation = st.c === 'erase' ? 'destination-out' : 'source-over';
+        ctx.beginPath();
+        st.pts.forEach((pt, i) => (i ? ctx.lineTo(pt.x, pt.y) : ctx.moveTo(pt.x, pt.y)));
+        ctx.stroke();
+      });
+      ctx.globalCompositeOperation = 'source-over';
+    };
+    im.src = baseImage;
+  }
+
+  /* ---------- 存與繳交 ---------- */
+  const line = h('textarea.textarea', {
+    value: saved.line || '',
+    placeholder: zh ? '加一句話說明你畫的東西' : 'One sentence about what you drew',
+  });
+  const status = h('span.mono', { style: { fontSize: 'var(--t-micro)', color: 'var(--on-paper-2)' } });
+
+  const png = () => cv.toDataURL('image/jpeg', 0.75);
 
   const autosave = debounce(() => {
-    saveWork('t0', { img: cv.toDataURL('image/jpeg', 0.72), line: line.value });
+    saveWork('t0', { img: png(), line: line.value, base: baseImage, submitted: !!saved.submitted });
+    status.textContent = zh ? '草稿已存' : 'Draft saved';
   }, 900);
+  line.addEventListener('input', autosave);
+
+  const submit = () => {
+    if (!strokes.length && !baseImage) { toast(zh ? '還沒畫東西' : 'Nothing drawn yet'); return; }
+    if (!state.me.name) { toast(zh ? '先在觀點畫布填你的名字' : 'Set your name on the canvas first'); return; }
+    saved.submitted = true;
+    saveWork('t0', { img: png(), line: line.value, base: baseImage, submitted: true, submittedAt: Date.now() });
+    status.textContent = zh ? '已繳交' : 'Handed in';
+    toast(zh ? '交出去了，全班看得到' : 'Handed in; the class can see it');
+    paintGallery();
+  };
 
   root.append(h('section.wrap--wide.section--tight', [
     h('.paper.stack', [
       h('.row.row--between', [
-        h('p.task__id', { text: zh ? '畫在這裡' : 'DRAW HERE' }),
+        h('p.task__id', { text: zh ? '在這張白紙上畫' : 'DRAW ON THIS SHEET' }),
         h('.row.row--tight', [
-          h('button.btn.btn--sm', { type: 'button', onclick: () => file.click() }, zh ? '改上傳照片' : 'Upload a photo'),
+          status,
+          h('button.btn.btn--sm', { type: 'button', onclick: () => file.click() },
+            zh ? '改上傳照片' : 'Upload a photo'),
           file,
         ]),
       ]),
       tools,
       cv,
       field(zh ? '你的一句話' : 'Your sentence', line),
-      h('.doneline', [h('.doneline__dot'),
-        h('span', { text: zh ? '畫出了一個起點，不能只寫「水庫」' : 'A starting point is drawn, not just "a reservoir"' })]),
-      h('.row', [h('button.btn.btn--primary', { type: 'button', onclick: () => { autosave(); toast(t('saved')); } }, t('save'))]),
+      h('.doneline', { data: { done: String(!!saved.submitted) } }, [
+        h('.doneline__dot'),
+        h('span', { text: zh ? '畫出了一個起點，不能只寫「水庫」' : 'A starting point is drawn, not just "a reservoir"' }),
+      ]),
+      h('.row', [
+        h('button.btn.btn--primary', { type: 'button', onclick: submit }, zh ? '繳交' : 'Hand in'),
+        h('button.btn', {
+          type: 'button',
+          onclick: () => {
+            const a = document.createElement('a');
+            a.href = cv.toDataURL('image/png');
+            a.download = `我畫的水路-${state.me.name || 'me'}.png`;
+            document.body.append(a); a.click(); a.remove();
+          },
+        }, zh ? '下載我的圖' : 'Download'),
+      ]),
     ]),
   ]));
+
+  /* ---------- 全班交了什麼 ---------- */
+  const gallery = h('section.wrap--wide.section--tight.stack');
+  root.append(gallery);
+
+  function paintGallery() {
+    clear(gallery);
+    const rows = allWork('t0').filter(w => w.submitted && w.img);
+    gallery.append(eyebrow(zh ? `全班交上來的　${rows.length}` : `HANDED IN · ${rows.length}`));
+    if (!rows.length) {
+      gallery.append(h('p.note-line', { text: zh
+        ? '還沒有人交。第一張交上來的，之後回頭看會最有感覺。'
+        : 'Nothing handed in yet.' }));
+      return;
+    }
+    gallery.append(h('.draw__gallery', rows.map(w => h('.draw__card', [
+      h('img', { src: w.img, alt: '', loading: 'lazy' }),
+      h('p.mono', { style: { margin: 0, fontSize: 'var(--t-micro)', color: 'var(--fg-3)' },
+                    text: `${w.name || (zh ? '匿名' : 'anon')}${w.group ? '・' + w.group : ''}` }),
+      w.line ? h('p', { style: { margin: 0, fontSize: 'var(--t-xs)', lineHeight: 1.5 }, text: w.line }) : null,
+    ].filter(Boolean)))));
+    gallery.append(h('p.note-line', { text: zh
+      ? '每個人畫的都不一樣。等到第六節，你會知道自己漏掉了哪一段。'
+      : 'Everyone drew it differently. By session six you will know which stretch you left out.' }));
+  }
+
+  paintGallery();
+  offs.push(subscribe(w => { if (w === 'work') paintGallery(); }));
+
+  // 還原先前的畫
+  if (saved.img && !baseImage) {
+    const im = new Image();
+    im.onload = () => { white(); ctx.drawImage(im, 0, 0, W, H); baseImage = saved.img; };
+    im.src = saved.img;
+  }
+  if (saved.submitted) status.textContent = zh ? '已繳交' : 'Handed in';
+
+  return () => offs.forEach(fn => fn());
 }
 
 /* ============================================================

@@ -6,6 +6,7 @@ import { getLang, setLang, onLang, t, L } from './i18n.js';
 import { initSync, state, subscribe, sync, setClass } from './store.js';
 import { initAuth, onAuth, auth, signIn, signOut, isStaff, isAdmin, signedIn } from './auth.js';
 import { SESSIONS, BY_ID, META } from '../data/course.js';
+import { CONFIG } from '../../config.js';
 
 const main = qs('#main');
 const topnav = qs('#topnav');
@@ -181,7 +182,7 @@ function paintChrome() {
   const pct = (state.cls.session / 10) * 100;
   qs('#streamFill').style.width = Math.max(3, pct) + '%';
 
-  qs('#brandName').textContent = getLang() === 'zh' ? '頭前溪借水課' : 'Borrowed Water';
+  qs('#brandName').textContent = getLang() === 'zh' ? '探究頭前溪流域' : 'The Touqian Basin';
   document.title = getLang() === 'zh'
     ? '頭前溪借水課｜你家水龍頭的水，是跟誰借的？'
     : 'Borrowed Water | Where is the water in your tap borrowed from?';
@@ -227,8 +228,34 @@ function keys(e) {
   }
 }
 
+/* ---------- 版本檢查 ----------
+   ES module 的快取很黏，改版之後瀏覽器常常混用新舊檔，
+   症狀千奇百怪（按鈕沒反應、狀態對不上）而且很難查。
+   index.html 與 config.js 各帶一個版本號，對不上就直接講。 */
+function checkBuild() {
+  const meta = document.querySelector('meta[name="build"]')?.content;
+  if (!meta || !CONFIG.build || meta === CONFIG.build) return;
+  const zh = getLang() === 'zh';
+  const bar = h('.stalebar', [
+    h('span', { text: zh
+      ? '你的瀏覽器載到了舊版的程式，畫面可能怪怪的。'
+      : 'Your browser loaded a stale build; things may behave oddly.' }),
+    h('button.btn.btn--sm.btn--primary', {
+      type: 'button',
+      onclick: () => {
+        const u = new URL(location.href);
+        u.searchParams.set('v', CONFIG.build);
+        location.replace(u.toString());
+      },
+    }, zh ? '載入新版' : 'Reload'),
+  ]);
+  document.body.prepend(bar);
+  console.warn('build mismatch: html=' + meta + ' js=' + CONFIG.build);
+}
+
 /* ---------- 啟動 ---------- */
 async function boot() {
+  checkBuild();
   await initAuth();
   await initSync();
   onAuth(() => { paintChrome(); render(); });
