@@ -35,7 +35,7 @@ export default function join(root, { params }) {
           h('p.task__id', { text: zh ? '第一步' : 'STEP ONE' }),
           h('h2.task__title', { text: zh ? '用你的 Google 帳號登入' : 'Sign in with your Google account' }),
           h('p', { style: { fontSize: 'var(--t-sm)' }, text: zh
-            ? '登入之後，你在課堂上寫的東西才會跟著你走——換裝置、下一節課，都還在。'
+            ? '登入之後，你在課堂上寫的東西才會跟著你走。換裝置、下一節課，都還在。'
             : 'Signing in keeps your work with you across devices and sessions.' }),
           code ? h('p.mono', { style: { fontSize: 'var(--t-sm)', color: 'var(--water)' },
                                 text: (zh ? '你要加入的班級：' : 'Class: ') + code }) : null,

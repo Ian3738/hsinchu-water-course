@@ -81,16 +81,22 @@ function setBackground(path) {
   next.src = src;
 }
 
-/* 沒登入不能上課。
-   例外：關於頁與入班頁一定要開，不然沒有地方可以登入。
-   另一個例外：Firebase 連不上時不擋——網路出問題不該把整班鎖在外面。 */
-const OPEN_PATHS = /^\/(about|join)?$/;
+/* 學生要先登入、先進班，才看得到課程。
+   還沒進班就一路導到入班頁——先看課程對還沒加入的人沒有意義。
 
-function needsSignIn(path) {
-  if (!auth.available) return false;      // 沒有帳號系統就不擋
-  if (!auth.ready) return false;          // 還在確認登入狀態，先放行
-  if (signedIn()) return false;
-  return !OPEN_PATHS.test(path);
+   例外：
+     ・關於頁與入班頁永遠開著，不然沒有地方可以登入
+     ・老師與管理員不受限制，他們要能備課
+     ・Firebase 連不上時完全不擋。網路出問題不該把整班鎖在外面 */
+const OPEN_PATHS = /^\/(about|join)$/;
+
+function gateReason(path) {
+  if (!auth.available || !auth.ready) return null;   // 沒有帳號系統或還在確認，先放行
+  if (OPEN_PATHS.test(path)) return null;
+  if (!signedIn()) return 'signin';
+  if (isStaff()) return null;
+  const inClass = Object.keys(auth.classes || {}).length > 0;
+  return inClass ? null : 'join';
 }
 
 let currentCleanup = null;
@@ -98,8 +104,10 @@ let currentCleanup = null;
 async function render() {
   const { path, params } = parseHash();
 
-  if (needsSignIn(path)) {
-    location.hash = '#/join';
+  // 沒登入或還沒進班，一律先去入班頁
+  if (gateReason(path)) {
+    if (location.hash !== '#/join') location.hash = '#/join';
+    else { clear(main); (await import('./views/join.js')).default(main, { params }); }
     return;
   }
 
