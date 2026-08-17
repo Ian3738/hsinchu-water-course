@@ -1,7 +1,7 @@
 /* 介面字串 — 中英雙語 */
 export const UI = {
   /* 通用 */
-  courseName:   { zh: '頭前溪借水課', en: 'Borrowed Water' },
+  courseName:   { zh: '探究頭前溪流域', en: 'The Touqian Basin' },
   home:         { zh: '課程總覽', en: 'Course map' },
   session:      { zh: '節次', en: 'Session' },
   minutes:      { zh: '分鐘', en: 'min' },

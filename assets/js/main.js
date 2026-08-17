@@ -208,9 +208,7 @@ function paintChrome() {
   if (tLink) tLink.hidden = !isStaff();
 
   qs('#brandName').textContent = getLang() === 'zh' ? '探究頭前溪流域' : 'The Touqian Basin';
-  document.title = getLang() === 'zh'
-    ? '頭前溪借水課｜你家水龍頭的水，是跟誰借的？'
-    : 'Borrowed Water | Where is the water in your tap borrowed from?';
+  document.title = getLang() === 'zh' ? '探究頭前溪流域' : 'The Touqian Basin';
 }
 
 /* Google 的四色標記，內嵌 SVG，不外連 */

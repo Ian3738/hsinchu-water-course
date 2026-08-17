@@ -17,7 +17,7 @@
    關掉的方法：網址加 ?nosw=1，會註銷並清掉快取。
    ============================================================ */
 
-const VERSION = 'hwc-20260817-2020';
+const VERSION = 'hwc-20260817-2023';
 const CODE = `${VERSION}-code`;
 const ASSET = `${VERSION}-asset`;
 
