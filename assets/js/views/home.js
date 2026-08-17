@@ -1,16 +1,14 @@
-/* 首頁：借水事件簿的進度地圖。
+/* 首頁：課程總覽。關卡與鎖只在進入課程之後才出現，
    刻意壓在兩個畫面內。這是入口不是文章，捲太久會找不到自己上到哪。 */
 import { h, eyebrow } from '../ui.js';
 import { L, t, getLang } from '../i18n.js';
 import { SESSIONS, RULES, META } from '../../data/course.js';
 import { state, notesList } from '../store.js';
 import { unlocked, clearedCount } from '../gate.js';
-import { PUZZLES } from '../../data/puzzles.js';
 
 export default function home(root) {
   const zh = getLang() === 'zh';
   root.classList.add('home-tight');
-  const total = Object.keys(PUZZLES).length;
   const done = clearedCount();
   const nextUp = SESSIONS.find(x => !unlocked(x.id)) || SESSIONS[0];
 
@@ -25,24 +23,11 @@ export default function home(root) {
     h('p.lede', { text: L(META.sub) }),
     h('.row', [
       h('a.btn.btn--primary.btn--lg', { href: `#/s/${nextUp.id}` },
-        done ? (zh ? `接著解第 ${PUZZLES[nextUp.id]?.caseNo || ''} 關` : 'Continue the case') : t('enterCourse')),
+        done ? (zh ? '接著上' : 'Continue') : t('enterCourse')),
       h('a.btn.btn--lg', { href: '#/board' }, t('openBoard')),
       done ? h('a.btn.btn--lg', { href: '#/reflect' }, zh ? '我的軌跡' : 'My trail') : null,
     ].filter(Boolean)),
-
-    /* 進度條：一眼看到十一關破到哪 */
-    h('.stack-sm', [
-      h('.row.row--between', [
-        h('span.mono', { style: { fontSize: 'var(--t-micro)', letterSpacing: '.2em', color: 'var(--clay-lit)' },
-                         text: zh ? '借水事件簿' : 'THE CASE FILE' }),
-        h('span.mono', { style: { fontSize: 'var(--t-xs)', color: 'var(--fg-2)' }, text: `${done} / ${total}` }),
-      ]),
-      h('.caseline', SESSIONS.map(s => h('a.caseline__pip', {
-        href: `#/s/${s.id}`,
-        title: `${PUZZLES[s.id]?.caseNo || ''}　${L(s.title)}`,
-        data: { done: String(unlocked(s.id)), at: String(s.id === nextUp.id) },
-      }))),
-    ]),
+    h('p.note-line', { text: L(META.tail) }),
   ]));
 
   /* ---------- 第二屏：關卡清單，兩欄並排 ---------- */
@@ -52,12 +37,12 @@ export default function home(root) {
       href: `#/s/${s.id}`,
       data: { done: String(cleared), current: String(s.id === nextUp.id) },
     }, [
-      h('span.map__n', { text: PUZZLES[s.id]?.caseNo || String(s.n).padStart(2, '0') }),
+      h('span.map__n', { text: String(s.n).padStart(2, '0') }),
       h('.map__body', [
         h('span.map__title', { text: L(s.title) }),
         h('span.map__sub', { text: L(s.sub) }),
       ]),
-      h('span.map__meta', { text: cleared ? '✓' : `${s.mins}′` }),
+      h('span.map__meta', { text: cleared ? (zh ? '上過了 ✓' : 'done ✓') : `${s.mins}′` }),
     ]);
   };
 

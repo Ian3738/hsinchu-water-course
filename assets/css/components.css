@@ -1010,3 +1010,23 @@ body:has(.deck) .footer { display: none; }
 .home-tight .map__item { padding-block: var(--s3); }
 .home-tight .map__title { font-size: var(--t-md); }
 .home-tight .lede { margin-bottom: 0; }
+
+/* 提問旁的文字雲：左邊留言、右邊看全班的重心 */
+.talk__split {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: var(--s5);
+  align-items: start;
+}
+.talk__side { display: grid; gap: var(--s3); min-width: 0; }
+.talk__cloud { display: grid; gap: var(--s3); min-width: 0; }
+.talk__cloud .cloud { min-height: 150px; padding: var(--s4) var(--s3); }
+
+@media (max-width: 900px) {
+  .talk__split { grid-template-columns: 1fr; }
+  .talk__cloud .cloud { min-height: 110px; }
+}
+
+/* 投影模式：文字雲放大，這是要給全班看的 */
+:root[data-projection="on"] .talk__split { grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); }
+:root[data-projection="on"] .talk__cloud .cloud { min-height: 34vh; }

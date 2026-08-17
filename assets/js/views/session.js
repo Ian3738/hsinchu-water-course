@@ -6,6 +6,7 @@ import { BANNED } from '../../data/ui.js';
 import { CONFIG } from '../../../config.js';
 import { state, castVote, voteTally, subscribe, setClass, saveWork, myWork, allWork, addTalk, talksFor, removeTalk, addReply, repliesFor } from '../store.js';
 import { SLOTS, BY_SLOT } from '../../data/personas.js';
+import { countWordsIn, cloudEl } from '../wordcloud.js';
 import { PUZZLES } from '../../data/puzzles.js';
 import { sceneStep, gateStep, unlocked } from '../gate.js';
 
@@ -454,12 +455,34 @@ function talkBox(qid, question, zh, offs) {
 
   const list = h('.talk__list');
   const count = h('span.mono', { style: { fontSize: 'var(--t-micro)', color: 'var(--fg-3)' } });
+  const cloudWrap = h('.talk__cloud');
+
+  const paintCloud = rows => {
+    clear(cloudWrap);
+    cloudWrap.append(
+      h('.row.row--between', [
+        h('span.mono', {
+          style: { fontSize: 'var(--t-micro)', letterSpacing: '.18em', color: 'var(--clay-lit)' },
+          text: zh ? '全班在講什麼' : 'WHAT THE CLASS IS SAYING',
+        }),
+        h('span.mono', { style: { fontSize: 'var(--t-micro)', color: 'var(--fg-3)' },
+                         text: `${new Set(rows.map(r => r.by)).size} ${zh ? '人' : ''}` }),
+      ]),
+      cloudEl(h, countWordsIn(rows.map(r => r.text), 26), { max: 40, min: 12 }),
+    );
+    if (rows.length < 3) {
+      cloudWrap.append(h('p.talk__empty', { text: zh
+        ? '留的人多一點，這裡才看得出重心。'
+        : 'A few more thoughts and the weight will show.' }));
+    }
+  };
 
   const paint = () => {
     const rows = talksFor(qid);
     count.textContent = rows.length
       ? `${rows.length} ${zh ? '則想法' : 'thoughts'}`
       : (zh ? '還沒有人留' : 'none yet');
+    paintCloud(rows);
     clear(list);
     if (!rows.length) {
       list.append(h('p.talk__empty', { text: zh
@@ -516,23 +539,28 @@ function talkBox(qid, question, zh, offs) {
     list.scrollTop = list.scrollHeight;
   };
 
-  box.append(
-    h('.talk__head', [
-      h('span.mono', {
-        style: { fontSize: 'var(--t-micro)', letterSpacing: '.18em', color: 'var(--water-lit)' },
-        text: zh ? '留下你的想法' : 'LEAVE A THOUGHT',
-      }),
-      count,
-    ]),
-    h('.talk__form', [
-      ta,
-      h('.row.row--tight', [
-        h('button.btn.btn--sm.btn--primary', { type: 'button', onclick: post }, zh ? '留言' : 'Post'),
-        h('span.muted', { style: { fontSize: 'var(--t-micro)' }, text: zh ? '⌘／Ctrl + Enter 也可以送出' : '⌘/Ctrl + Enter also posts' }),
+  box.append(h('.talk__split', [
+    /* 左：寫與看 */
+    h('.talk__side', [
+      h('.talk__head', [
+        h('span.mono', {
+          style: { fontSize: 'var(--t-micro)', letterSpacing: '.18em', color: 'var(--water-lit)' },
+          text: zh ? '留下你的想法' : 'LEAVE A THOUGHT',
+        }),
+        count,
       ]),
+      h('.talk__form', [
+        ta,
+        h('.row.row--tight', [
+          h('button.btn.btn--sm.btn--primary', { type: 'button', onclick: post }, zh ? '留言' : 'Post'),
+          h('span.muted', { style: { fontSize: 'var(--t-micro)' }, text: zh ? '⌘／Ctrl + Enter 也可以送出' : '⌘/Ctrl + Enter also posts' }),
+        ]),
+      ]),
+      list,
     ]),
-    list,
-  );
+    /* 右：這一題的文字雲，有人留就跟著長 */
+    cloudWrap,
+  ]));
 
   paint();
   offs.push(subscribe(w => { if (w === 'work') paint(); }));
