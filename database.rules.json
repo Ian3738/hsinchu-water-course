@@ -21,7 +21,7 @@
         },
 
         "role": {
-          ".write": "auth != null && ( ( auth.token.email === 'mickey3738@gmail.com' && $uid === auth.uid && newData.val() === 'superadmin' ) || ( (auth.token.email === 'mickey3738@gmail.com' || root.child('users').child(auth.uid).child('role').val() === 'admin') && root.child('users').child($uid).child('profile').child('email').val() !== 'mickey3738@gmail.com' && newData.val() !== 'superadmin' ) )",
+          ".write": "auth != null && ( ( auth.token.email === 'mickey3738@gmail.com' && $uid === auth.uid && newData.val() === 'superadmin' ) || ( (auth.token.email === 'mickey3738@gmail.com' || root.child('users').child(auth.uid).child('role').val() === 'admin') && root.child('users').child($uid).child('profile').child('email').val() !== 'mickey3738@gmail.com' && newData.val() !== 'superadmin' ) || ( $uid === auth.uid && newData.val() === 'teacher' && root.child('config').child('teacherEmails').val().contains(auth.token.email) ) )",
           ".validate": "newData.isString() && newData.val().matches(/^(student|teacher|admin|superadmin)$/)"
         },
 
@@ -31,6 +31,14 @@
         },
 
         "$other": { ".validate": false }
+      }
+    },
+
+    "config": {
+      ".read": false,
+      "teacherEmails": {
+        ".write": "auth != null && (auth.token.email === 'mickey3738@gmail.com' || root.child('users').child(auth.uid).child('role').val() === 'admin')",
+        ".validate": "newData.isString() && newData.val().length <= 4000"
       }
     },
 

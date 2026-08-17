@@ -35,12 +35,14 @@ export async function initAuth() {
   const base = CONFIG.firebase;
   if (!base || !base.apiKey) { auth.ready = true; emit(); return auth; }
 
-  /* Safari 從 16.1 起做儲存分區，跨網域的登入轉址會拿不回結果。
-     站台開在 Firebase Hosting 上時，把 authDomain 指到同一個網域，
-     iPhone 才登得進去。GitHub Pages 上維持預設。 */
-  const host = location.hostname;
-  const sameOrigin = /\.(web\.app|firebaseapp\.com)$/.test(host);
-  const cfg = sameOrigin ? { ...base, authDomain: host } : base;
+  /* authDomain 一律用專案預設的 firebaseapp.com。
+     曾經試過在 Firebase Hosting 上改成 web.app 讓它同源（iOS 的儲存分區
+     會擋跨網域的轉址），結果 Google 那組 OAuth client 只登記了
+     firebaseapp.com 的 redirect URI，改了就整個登不進去（redirect_uri_mismatch）。
+     要同源的話，得先到 Google Cloud Console 的憑證頁把
+     https://hsinchu-water-course.web.app/__/auth/handler 加進去。
+     在那之前維持預設；iOS 走 popup 本來就不受儲存分區影響。 */
+  const cfg = base;
 
   try {
     const [appMod, authMod, dbMod] = await Promise.all([
@@ -175,9 +177,21 @@ async function bootstrapUser() {
       await dbMod.set(dbMod.ref(db, `${base}/role`), 'superadmin');
       role = 'superadmin';
     }
-  } else if (!role) {
-    await dbMod.set(dbMod.ref(db, `${base}/role`), 'student');
-    role = 'student';
+  } else if (!role || role === 'student') {
+    /* 白名單上的信箱直接成為老師。
+       名單存在 config/teacherEmails，誰都讀不到，只有管理員能寫。
+       這裡不先查再寫，而是直接試寫——規則會判斷；
+       不在名單上就會被拒絕，那就是學生。 */
+    if (!role) {
+      await dbMod.set(dbMod.ref(db, `${base}/role`), 'student');
+      role = 'student';
+    }
+    try {
+      await dbMod.set(dbMod.ref(db, `${base}/role`), 'teacher');
+      role = 'teacher';
+    } catch {
+      // 不在名單上，維持學生
+    }
   }
 
   auth.role = role;
