@@ -1,0 +1,14 @@
+name = "hwc-agent"
+main = "src/index.js"
+compatibility_date = "2025-09-01"
+
+# 只允許你的網站呼叫。部署 Pages 後把網址填進來，多個用逗號分隔。
+# 留空代表不限來源（先導測試方便，正式上課建議填）。
+[vars]
+ALLOWED_ORIGINS = ""
+GEMINI_MODEL = "gemini-2.5-flash"
+
+# 金鑰用 secret，不要寫在這個檔案裡：
+#   npx wrangler secret put GEMINI_API_KEY
+# 或改用 Anthropic：
+#   npx wrangler secret put ANTHROPIC_API_KEY

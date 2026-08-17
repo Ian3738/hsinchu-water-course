@@ -1,0 +1,16 @@
+# 金鑰絕對不進版控
+.env
+.env.*
+*.key
+*.pem
+secrets.json
+config.local.js
+
+# 影片檔通常太大，用 Git LFS 或放外部空間
+media/*.mp4
+media/*.mov
+
+.DS_Store
+node_modules/
+worker/.wrangler/
+worker/node_modules/

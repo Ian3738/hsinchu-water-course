@@ -1,0 +1,110 @@
+/* ============================================================
+   頭前溪借水課 — 設計 token
+   配色沿用 Hsinchu_Borrowed_Water_Class_Deck_EN.pptx
+   ============================================================ */
+
+:root {
+  /* ---- 墨 ---- */
+  --ink:        #0F2E3D;   /* 簡報主色，全站底 */
+  --ink-2:      #143A4C;   /* 稍淺的墨，用於分層 */
+  --ink-3:      #1B4658;   /* 再淺一階，卡片內襯 */
+  --ink-deep:   #08202C;   /* 比主色更深，用於凹陷面 */
+
+  /* ---- 水 ---- */
+  --water:      #1B6B80;
+  --water-lit:  #3D96AC;   /* 亮水，hover 與流動粒子 */
+  --water-dim:  #12495A;
+  --water-film: rgba(61, 150, 172, .14);
+
+  /* ---- 赭 ---- */
+  --clay:       #D97742;   /* 人的痕跡：徵地、廢水、代價 */
+  --clay-lit:   #EC9666;
+  --clay-dim:   #A9542A;
+  --clay-film:  rgba(217, 119, 66, .13);
+
+  /* ---- 灰階 ---- */
+  --mist:       #9AB2BC;
+  --slate:      #5B6E77;
+  --paper:      #F3F5F6;
+  --paper-warm: #F7F4EF;   /* 書寫面，帶一點紙的暖 */
+  --paper-line: #DDE4E7;
+
+  /* ---- 語意 ---- */
+  --absent:     #7E9DAD;   /* 未在場者：虛線、空位 */
+  --agent:      #C9A227;   /* AI agent 發言的識別色 */
+  --agent-film: rgba(201, 162, 39, .12);
+
+  /* ---- 前景 ---- */
+  --fg:         #EAF1F4;
+  --fg-2:       #B9CAD2;
+  --fg-3:       #86A0AB;
+  --on-paper:   #14313F;
+  --on-paper-2: #4A6472;
+
+  /* ---- 描邊 ---- */
+  --rule:        rgba(154, 178, 188, .22);
+  --rule-strong: rgba(154, 178, 188, .38);
+  --rule-paper:  #D5DEE2;
+
+  /* ---- 字 ---- */
+  --f-display: "Noto Serif TC", "Instrument Serif", "Songti TC", "PingFang TC", serif;
+  --f-latin:   "Instrument Serif", "Noto Serif TC", Georgia, serif;
+  --f-body:    "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", -apple-system, sans-serif;
+  --f-mono:    "IBM Plex Mono", "SFMono-Regular", ui-monospace, Menlo, monospace;
+
+  /* 流體級距，投影與手機共用一套 */
+  --t-mega:  clamp(2.6rem, 1.2rem + 5.4vw, 6.2rem);
+  --t-xxl:   clamp(2.0rem, 1.1rem + 3.6vw, 4.0rem);
+  --t-xl:    clamp(1.55rem, 1.05rem + 1.9vw, 2.55rem);
+  --t-lg:    clamp(1.22rem, 1.0rem + .85vw, 1.62rem);
+  --t-md:    clamp(1.02rem, .94rem + .32vw, 1.16rem);
+  --t-sm:    clamp(.9rem, .86rem + .18vw, 1.0rem);
+  --t-xs:    clamp(.78rem, .75rem + .13vw, .86rem);
+  --t-micro: .72rem;
+
+  /* ---- 間距（8 的倍數，兩個例外給細節用）---- */
+  --s1: 4px;  --s2: 8px;  --s3: 12px; --s4: 16px;
+  --s5: 24px; --s6: 32px; --s7: 48px; --s8: 64px;
+  --s9: 96px; --s10: 144px;
+
+  /* ---- 圓角：幾乎不用，這是測量簿不是 app ---- */
+  --r-sm: 2px;
+  --r-md: 3px;
+  --r-lg: 4px;
+
+  /* ---- 陰影 ---- */
+  --shadow-paper: 0 1px 0 rgba(8,32,44,.5), 0 18px 40px -24px rgba(8,32,44,.9);
+  --shadow-lift:  0 2px 0 rgba(8,32,44,.5), 0 30px 60px -28px rgba(8,32,44,.95);
+  --shadow-note:  0 1px 2px rgba(8,32,44,.28), 0 10px 22px -16px rgba(8,32,44,.7);
+
+  /* ---- 動態 ---- */
+  --ease:     cubic-bezier(.22,.61,.36,1);
+  --ease-out: cubic-bezier(.16,1,.3,1);
+  --dur:      .32s;
+  --dur-slow: .7s;
+
+  /* ---- 版面 ---- */
+  --measure: 62ch;      /* 中文閱讀行長 */
+  --page:    1180px;
+  --page-wide: 1440px;
+  --rail:    clamp(16px, 4vw, 64px);
+}
+
+/* 減少動態偏好：關掉流動與呼吸，保留狀態變化 */
+@media (prefers-reduced-motion: reduce) {
+  :root { --dur: .01s; --dur-slow: .01s; }
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* 投影模式：老師按 P 切換，字級整體放大，行距拉開 */
+:root[data-projection="on"] {
+  --t-md: 1.32rem;
+  --t-sm: 1.16rem;
+  --t-xs: 1.0rem;
+  --measure: 46ch;
+}

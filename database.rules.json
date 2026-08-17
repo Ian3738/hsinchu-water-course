@@ -1,0 +1,114 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    "users": {
+      ".read": "auth != null && (auth.token.email === 'mickey3738@gmail.com' || root.child('users').child(auth.uid).child('role').val() === 'admin' || root.child('users').child(auth.uid).child('role').val() === 'teacher')",
+      ".indexOn": ["role"],
+
+      "$uid": {
+        ".read": "auth != null && ($uid === auth.uid || auth.token.email === 'mickey3738@gmail.com' || root.child('users').child(auth.uid).child('role').val() === 'admin' || root.child('users').child(auth.uid).child('role').val() === 'teacher')",
+
+        "profile": {
+          ".write": "auth != null && ($uid === auth.uid || auth.token.email === 'mickey3738@gmail.com' || root.child('users').child(auth.uid).child('role').val() === 'admin')",
+          "email":  { ".validate": "newData.isString() && newData.val().length <= 200" },
+          "name":   { ".validate": "newData.isString() && newData.val().length <= 80" },
+          "photo":  { ".validate": "newData.isString() && newData.val().length <= 500" },
+          "createdAt": { ".validate": "newData.isNumber()" },
+          "lastSeen":  { ".validate": "newData.isNumber()" },
+          "$other": { ".validate": false }
+        },
+
+        "role": {
+          ".write": "auth != null && ( ( auth.token.email === 'mickey3738@gmail.com' && $uid === auth.uid && newData.val() === 'superadmin' ) || ( (auth.token.email === 'mickey3738@gmail.com' || root.child('users').child(auth.uid).child('role').val() === 'admin') && root.child('users').child($uid).child('profile').child('email').val() !== 'mickey3738@gmail.com' && newData.val() !== 'superadmin' ) )",
+          ".validate": "newData.isString() && newData.val().matches(/^(student|teacher|admin|superadmin)$/)"
+        },
+
+        "disabled": {
+          ".write": "auth != null && (auth.token.email === 'mickey3738@gmail.com' || root.child('users').child(auth.uid).child('role').val() === 'admin') && root.child('users').child($uid).child('profile').child('email').val() !== 'mickey3738@gmail.com'",
+          ".validate": "newData.isBoolean()"
+        },
+
+        "$other": { ".validate": false }
+      }
+    },
+
+    "classes": {
+      ".read": "auth != null",
+      ".indexOn": ["code", "teacherUid"],
+
+      "$cid": {
+        ".write": "auth != null && root.child('users').child(auth.uid).child('disabled').val() !== true && ( auth.token.email === 'mickey3738@gmail.com' || root.child('users').child(auth.uid).child('role').val() === 'admin' || ( root.child('users').child(auth.uid).child('role').val() === 'teacher' && ( !data.exists() || data.child('teacherUid').val() === auth.uid ) && ( !newData.exists() || newData.child('teacherUid').val() === auth.uid ) ) )",
+
+        "name":      { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 60" },
+        "code":      { ".validate": "newData.isString() && newData.val().matches(/^[a-z0-9_-]{2,20}$/)" },
+        "condition": { ".validate": "newData.isString() && newData.val().matches(/^(agent|blank)$/)" },
+        "session":   { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 10" },
+        "open":      { ".validate": "newData.isBoolean()" },
+        "teacherUid":{ ".validate": "newData.isString()" },
+        "teacherEmail": { ".validate": "newData.isString() && newData.val().length <= 200" },
+        "createdAt": { ".validate": "newData.isNumber()" },
+        "$other":    { ".validate": false }
+      }
+    },
+
+    "members": {
+      "$cid": {
+        ".read": "auth != null",
+
+        "$uid": {
+          ".write": "auth != null && root.child('users').child(auth.uid).child('disabled').val() !== true && ( auth.token.email === 'mickey3738@gmail.com' || root.child('users').child(auth.uid).child('role').val() === 'admin' || root.child('classes').child($cid).child('teacherUid').val() === auth.uid || ( $uid === auth.uid && root.child('classes').child($cid).child('open').val() === true ) )",
+
+          "name":     { ".validate": "newData.isString() && newData.val().length <= 80" },
+          "email":    { ".validate": "newData.isString() && newData.val().length <= 200" },
+          "group":    { ".validate": "newData.isString() && newData.val().length <= 20" },
+          "joinedAt": { ".validate": "newData.isNumber()" },
+          "$other":   { ".validate": false }
+        }
+      }
+    },
+
+    "data": {
+      "$cid": {
+        ".read": "auth != null && ( root.child('members').child($cid).child(auth.uid).exists() || auth.token.email === 'mickey3738@gmail.com' || root.child('users').child(auth.uid).child('role').val() === 'admin' || root.child('classes').child($cid).child('teacherUid').val() === auth.uid )",
+
+        "notes": {
+          "$nid": {
+            ".write": "auth != null && root.child('users').child(auth.uid).child('disabled').val() !== true && root.child('members').child($cid).child(auth.uid).exists() && ( !data.exists() || data.child('authorId').val() === auth.uid || root.child('classes').child($cid).child('teacherUid').val() === auth.uid || auth.token.email === 'mickey3738@gmail.com' ) && ( !newData.exists() || newData.child('authorId').val() === auth.uid )",
+            "body":  { ".validate": "newData.isString() && newData.val().length <= 2000" },
+            "who":   { ".validate": "newData.isString() && newData.val().length <= 60" },
+            "cares": { ".validate": "newData.isString() && newData.val().length <= 40" }
+          }
+        },
+
+        "votes": {
+          "$pid": {
+            "$uid": {
+              ".write": "auth != null && $uid === auth.uid && root.child('members').child($cid).child(auth.uid).exists() && root.child('users').child(auth.uid).child('disabled').val() !== true",
+              ".validate": "newData.isString() && newData.val().length <= 60"
+            }
+          }
+        },
+
+        "work": {
+          "$wid": {
+            ".write": "auth != null && root.child('users').child(auth.uid).child('disabled').val() !== true && root.child('members').child($cid).child(auth.uid).exists() && ( !newData.exists() || newData.child('by').val() === auth.uid || root.child('classes').child($cid).child('teacherUid').val() === auth.uid )"
+          }
+        },
+
+        "agent": {
+          "$sid": {
+            ".write": "auth != null && root.child('users').child(auth.uid).child('disabled').val() !== true && root.child('members').child($cid).child(auth.uid).exists() && root.child('classes').child($cid).child('condition').val() === 'agent'"
+          }
+        },
+
+        "peers": {
+          "$uid": {
+            ".write": "auth != null && $uid === auth.uid && root.child('members').child($cid).child(auth.uid).exists()"
+          }
+        }
+      }
+    }
+  }
+}
