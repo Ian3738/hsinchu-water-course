@@ -102,7 +102,7 @@ export async function speak(slotId, question = '', turns = []) {
   return { text: scriptReply(slotId, question), via: 'script' };
 }
 
-/** 對照組：這個空位不該有任何 agent 內容 */
+/** 空位一律由 agent 進駐（已不再分實驗組／對照組） */
 export function agentEnabled() {
-  return state.cls.condition === 'agent';
+  return true;
 }

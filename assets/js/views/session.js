@@ -9,7 +9,7 @@ import { SLOTS, BY_SLOT } from '../../data/personas.js';
 
 export default function session(root, { arg }) {
   const s = BY_ID[arg];
-  if (!s) { root.append(h('.wrap.section', [h('h1.ask', 'Not found')])); return; }
+  if (!s) { root.append(h('.wrap.section', [h('h1.ask', { text: 'Not found' })])); return; }
   const zh = getLang() === 'zh';
   const i = SESSIONS.findIndex(x => x.id === s.id);
   const offs = [];
@@ -114,7 +114,7 @@ function renderBlock(b, s, zh, offs) {
       if (b.pairs) {
         kids.push(h('.stack-sm', b.pairs.map(([a, c]) => h('.bridge', [
           h('p', { style: { margin: 0, fontSize: 'var(--t-sm)', color: 'var(--fg-2)' }, text: L(a) }),
-          h('.bridge__arrow', '→'),
+          h('.bridge__arrow', { text: '→' }),
           h('p', { style: { margin: 0, fontSize: 'var(--t-sm)' }, text: L(c) }),
         ]))));
       }
@@ -150,7 +150,7 @@ function renderBlock(b, s, zh, offs) {
                           text: zh ? '你剛剛說的' : 'WHAT YOU JUST SAID' }),
             h('ul.bridge__list', b.said.map(x => h('li', { text: L(x) + '」' }))),
           ]),
-          h('.bridge__arrow', '→'),
+          h('.bridge__arrow', { text: '→' }),
           h('.card.card--clay', [
             h('p.mono', { style: { margin: 0, fontSize: 'var(--t-micro)', letterSpacing: '.18em', color: 'var(--clay-lit)' },
                           text: zh ? '所以下一個問題是' : 'SO THE NEXT QUESTION IS' }),

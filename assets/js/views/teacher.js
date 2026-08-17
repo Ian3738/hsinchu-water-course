@@ -1,4 +1,4 @@
-/* 教師控制台：班級、條件、進度、即時檢視、資料匯出 */
+/* 教師控制台：班級、進度、即時檢視、資料匯出 */
 import { h, clear, eyebrow, field, toast, downloadFile, pill } from '../ui.js';
 import { t, getLang } from '../i18n.js';
 import { SESSIONS } from '../../data/course.js';
@@ -9,7 +9,9 @@ import {
 } from '../store.js';
 import { engine } from '../agent.js';
 
-/* 話語編碼：自動標記只是初篩，正式分析仍須人工複核 */
+/* 話語編碼。自動標記只是初篩，正式分析仍須人工複核。
+   TNA 看的是狀態之間的「轉移」，所以每一則貢獻只能有一個狀態；
+   一則同時命中多個編碼時，依下面的順序取優先度最高的那個。 */
 const CODES = [
   { id: 'NAMES_ABSENT', zh: '指認未在場者', en: 'Names the absent',
     test: n => !!n.namesAbsent },
@@ -41,17 +43,6 @@ export default function teacher(root) {
     toast(zh ? '換班級要重新整理才會載入該班資料' : 'Reload to load that class');
   });
 
-  const condSeg = h('.seg', [
-    ['agent', t('condAgent')], ['blank', t('condBlank')],
-  ].map(([k, label]) => h('button.seg__btn', {
-    type: 'button', 'aria-pressed': String(state.cls.condition === k), data: { cond: k },
-    onclick: () => {
-      setClass({ condition: k });
-      [...condSeg.children].forEach(b => b.setAttribute('aria-pressed', String(b.dataset.cond === k)));
-      toast(k === 'agent' ? (zh ? '空位由 AI agent 進駐' : 'Agent occupies the slots') : (zh ? '空位維持空白' : 'Slots stay blank'));
-    },
-  }, label)));
-
   const sessSel = h('select.select', { style: { maxWidth: '260px' } },
     SESSIONS.map(s => h('option', { value: String(s.n), selected: s.n === state.cls.session },
       `${String(s.n).padStart(2, '0')}　${s.title[zh ? 'zh' : 'en']}`)));
@@ -59,9 +50,8 @@ export default function teacher(root) {
 
   root.append(h('section.wrap--wide.section--tight', [
     h('.card.on-ink.stack', [
-      h('.cols-3', [
+      h('.cols-2', [
         field(t('classCode'), codeIn, zh ? '同一代碼的裝置會看到同一張畫布' : 'Devices sharing this code share a canvas'),
-        h('.field', [h('span.field__label', { text: t('condition') }), condSeg]),
         field(zh ? '目前節次' : 'Current session', sessSel),
       ]),
       h('.row.row--tight', [
@@ -72,29 +62,23 @@ export default function teacher(root) {
     ]),
   ]));
 
-  /* ---------- 分派連結 ---------- */
-  const linkFor = cond => {
-    const base = location.href.split('#')[0];
-    return `${base}#/?class=${state.cls.code}&cond=${cond}`;
-  };
+  /* ---------- 入班連結 ---------- */
+  const joinLink = () => `${location.href.split('#')[0]}#/join?c=${state.cls.code}`;
   root.append(h('section.wrap--wide.section--tight.stack', [
-    eyebrow(zh ? '發給學生的連結' : 'LINKS TO HAND OUT'),
-    h('.cols-2', [
-      ['agent', t('condAgent')], ['blank', t('condBlank')],
-    ].map(([k, label]) => h('.card', [
-      h('p.card__title', { text: label }),
-      h('p.mono', { style: { margin: 0, fontSize: 'var(--t-xs)', wordBreak: 'break-all', color: 'var(--fg-2)' }, text: linkFor(k) }),
-      h('button.btn.btn--sm', {
-        type: 'button',
-        onclick: async () => {
-          try { await navigator.clipboard.writeText(linkFor(k)); toast(t('copied')); }
-          catch { toast(zh ? '複製不了，請手動選取' : 'Copy failed; select manually'); }
-        },
-      }, t('copy')),
-    ]))),
-    h('p.note-line', { text: zh
-      ? '同一個班級代碼、不同 cond 參數，兩組會共用同一張畫布。若要讓兩組互不干擾，班級代碼也要分開，例如 703a 與 703b。'
-      : 'Same class code with different cond shares one canvas. To keep the groups apart, give them separate class codes.' }),
+    eyebrow(zh ? '發給學生的連結' : 'LINK TO HAND OUT'),
+    h('.card', [
+      h('p.mono', { style: { margin: 0, fontSize: 'var(--t-xs)', wordBreak: 'break-all', color: 'var(--fg-2)' }, text: joinLink() }),
+      h('.row.row--tight', [
+        h('button.btn.btn--sm', {
+          type: 'button',
+          onclick: async () => {
+            try { await navigator.clipboard.writeText(joinLink()); toast(t('copied')); }
+            catch { toast(zh ? '複製不了，請手動選取' : 'Copy failed'); }
+          },
+        }, t('copy')),
+        h('a.btn.btn--sm', { href: '#/admin' }, zh ? '到後台看 QR' : 'QR in admin'),
+      ]),
+    ]),
   ]));
 
   /* ---------- 即時檢視 ---------- */
@@ -149,9 +133,7 @@ export default function teacher(root) {
         return h('.card', [
           h('p.card__title', { text: s.who[zh ? 'zh' : 'en'] }),
           h('p.muted', { style: { margin: 0, fontSize: 'var(--t-xs)' }, text: open
-            ? (state.cls.condition === 'agent'
-                ? `${turns.length} ${zh ? '則對話' : 'turns'}`
-                : (zh ? '對照組・留白' : 'control · blank'))
+            ? `${turns.length} ${zh ? '則對話' : 'turns'}`
             : `${zh ? '第' : 'opens in session'} ${s.unlock} ${zh ? '節開放' : ''}` }),
         ]);
       })),
@@ -178,25 +160,52 @@ export default function teacher(root) {
     downloadFile(`hwc-notes-${state.cls.code}-${stamp()}.csv`, toCsv(rows), 'text/csv;charset=utf-8');
   };
 
-  const exportEna = () => {
-    const head = ['unit', 'conversation', 'line', 'ts', 'condition', 'session', 'group', 'speaker', ...CODES.map(c => c.id), 'text'];
-    const rows = [head];
-    notesList().forEach((n, i) => {
+  /* ---- TNA ----
+     tna 套件吃兩種輸入：
+       long  每列一個事件：actor / time / action
+       wide  每列一位學習者：T1, T2, … 依序的狀態
+     兩種都給，研究者選一種用。 */
+
+  /** 一則貢獻的單一狀態：依 CODES 的順序取第一個命中的 */
+  const stateOf = n => {
+    const hit = CODES.find(c => c.test(n));
+    return hit ? hit.id : 'OTHER';
+  };
+
+  const exportTnaLong = () => {
+    const rows = [['actor', 'time', 'order', 'action', 'session', 'group', 'speaker', 'text']];
+    const seen = {};
+    notesList().forEach(n => {
+      const actor = n.authorId || n.author || 'unknown';
+      seen[actor] = (seen[actor] || 0) + 1;
       rows.push([
-        n.authorId || n.author || 'unknown',
-        `${state.cls.code}-s${n.session}`,
-        i + 1,
+        actor,
         new Date(n.ts).toISOString(),
-        state.cls.condition,
+        seen[actor],
+        stateOf(n),
         n.session,
         n.group || '',
         n.who || '',
-        ...CODES.map(c => (c.test(n) ? 1 : 0)),
         n.body,
       ]);
     });
-    downloadFile(`hwc-ena-${state.cls.code}-${stamp()}.csv`, toCsv(rows), 'text/csv;charset=utf-8');
+    downloadFile(`hwc-tna-long-${state.cls.code}-${stamp()}.csv`, toCsv(rows), 'text/csv;charset=utf-8');
     toast(zh ? '編碼是自動初篩，正式分析請人工複核' : 'Codes are an automated first pass; verify by hand');
+  };
+
+  const exportTnaWide = () => {
+    const bySeq = {};
+    notesList().forEach(n => {
+      const actor = n.authorId || n.author || 'unknown';
+      (bySeq[actor] = bySeq[actor] || []).push(stateOf(n));
+    });
+    const longest = Math.max(1, ...Object.values(bySeq).map(a => a.length));
+    const head = ['actor', ...Array.from({ length: longest }, (_, i) => 'T' + (i + 1))];
+    const rows = [head];
+    Object.entries(bySeq).forEach(([actor, seq]) => {
+      rows.push([actor, ...seq, ...Array(longest - seq.length).fill('')]);
+    });
+    downloadFile(`hwc-tna-wide-${state.cls.code}-${stamp()}.csv`, toCsv(rows), 'text/csv;charset=utf-8');
   };
 
   const fileIn = h('input', { type: 'file', accept: '.json', style: { display: 'none' } });
@@ -214,7 +223,8 @@ export default function teacher(root) {
     h('.row', [
       h('button.btn.btn--primary', { type: 'button', onclick: exportJson }, t('exportAll') + '（JSON）'),
       h('button.btn', { type: 'button', onclick: exportNotesCsv }, zh ? '貼文 CSV' : 'Notes CSV'),
-      h('button.btn.btn--water', { type: 'button', onclick: exportEna }, t('exportEna')),
+      h('button.btn.btn--water', { type: 'button', onclick: exportTnaLong }, t('exportTna') + ' long'),
+      h('button.btn.btn--water', { type: 'button', onclick: exportTnaWide }, t('exportTna') + ' wide'),
       h('button.btn', { type: 'button', onclick: () => fileIn.click() }, zh ? '匯入 JSON' : 'Import JSON'),
       fileIn,
       h('button.btn.btn--ghost', {
@@ -226,13 +236,16 @@ export default function teacher(root) {
       }, zh ? '清空本機資料' : 'Wipe local data'),
     ]),
     h('.card', [
-      h('p.card__title', { text: zh ? 'ENA 檔的欄位' : 'What is in the ENA file' }),
+      h('p.card__title', { text: zh ? 'TNA 檔怎麼讀' : 'What is in the TNA files' }),
       h('p.muted', { style: { margin: 0, fontSize: 'var(--t-sm)' }, text: zh
-        ? 'unit 是學習者、conversation 是「班級-節次」，之後五欄是話語編碼的 0／1。編碼由關鍵詞規則自動產生，只能當初篩；NAMES_ABSENT 一欄取的是學生自己勾選的結果，不是猜的。'
-        : 'unit is the learner, conversation is class-session, then five binary discourse codes. The codes come from keyword rules and are a first pass only. NAMES_ABSENT reflects the learner\'s own tick, not a guess.' }),
+        ? 'long 檔每列是一個事件：actor（學習者）、time（時間）、order（該學習者的第幾則）、action（狀態）。wide 檔每列是一位學習者，T1 起依序排開。tna 套件兩種都吃。'
+        : 'The long file has one row per event: actor, time, order, action. The wide file has one row per learner with states in order from T1. The tna package takes either.' }),
       h('p.muted', { style: { margin: 0, fontSize: 'var(--t-sm)' }, text: zh
-        ? '依變項的操作型定義要求「明確提及某一不在現場的對象，並說明該對象將如何受到所議方案影響」，後半段機器判不準，務必人工複核後再跑 ENA。'
-        : 'The operational definition also requires stating how the absent party is affected. A machine cannot judge that reliably. Verify by hand before running ENA.' }),
+        ? 'TNA 算的是狀態之間的轉移，所以一則貢獻只能有一個狀態。一則同時命中多個編碼時，依 NAMES_ABSENT → CITE → RESPOND → QUESTION → CLAIM 的順序取第一個；都沒中就是 OTHER。這個優先序會直接影響轉移矩陣，換順序前先想清楚。'
+        : 'TNA models transitions between states, so each contribution carries exactly one. When several codes match, the first of NAMES_ABSENT → CITE → RESPOND → QUESTION → CLAIM wins; none matching gives OTHER. This ordering shapes the transition matrix — think before changing it.' }),
+      h('p.muted', { style: { margin: 0, fontSize: 'var(--t-sm)' }, text: zh
+        ? 'NAMES_ABSENT 取的是學生自己勾選的結果，不是猜的。其餘四個由關鍵詞規則產生，只能當初篩，跑分析前務必人工複核。'
+        : 'NAMES_ABSENT reflects the learner\'s own tick. The other four come from keyword rules and are a first pass only. Verify by hand before analysis.' }),
     ]),
   ]));
 

@@ -51,22 +51,17 @@ export default function admin(root) {
     // 開新班
     const nameIn = h('input.input', { placeholder: zh ? '例：竹光國中 703' : 'e.g. Class 703' });
     const codeIn = h('input.input', { placeholder: zh ? '例：703a（英數字）' : 'e.g. 703a' });
-    const condSel = h('select.select', [
-      h('option', { value: 'agent' }, zh ? '實驗組・AI 代言' : 'Experimental · AI speaks'),
-      h('option', { value: 'blank' }, zh ? '對照組・空位留白' : 'Control · blank'),
-    ]);
     classBox.append(h('.card.on-ink.stack', [
       h('p.card__title', { text: zh ? '開一個新班' : 'Open a new class' }),
-      h('.cols-3', [
+      h('.cols-2', [
         field(zh ? '班級名稱' : 'Class name', nameIn),
         field(zh ? '班級代碼' : 'Class code', codeIn, zh ? '學生用這個代碼進班' : 'students join with this'),
-        field(zh ? '分組條件' : 'Condition', condSel),
       ]),
       h('.row', [h('button.btn.btn--primary', {
         type: 'button',
         onclick: async () => {
           try {
-            await createClass({ name: nameIn.value.trim() || codeIn.value.trim(), code: codeIn.value.trim(), condition: condSel.value });
+            await createClass({ name: nameIn.value.trim() || codeIn.value.trim(), code: codeIn.value.trim() });
             toast(zh ? '開好了' : 'Created');
             paintClasses();
           } catch (e) { toast(e.message || String(e)); }
@@ -158,20 +153,6 @@ function classCard(cid, c, zh, refresh) {
   const base = location.href.split('#')[0];
   const joinUrl = `${base}#/join?c=${cid}`;
 
-  const condSeg = h('.seg', [
-    ['agent', zh ? '實驗組' : 'Experimental'], ['blank', zh ? '對照組' : 'Control'],
-  ].map(([k, label]) => h('button.seg__btn', {
-    type: 'button', 'aria-pressed': String(c.condition === k), data: { cond: k },
-    onclick: async e => {
-      try {
-        await updateClass(cid, { condition: k });
-        c.condition = k;
-        [...condSeg.children].forEach(b => b.setAttribute('aria-pressed', String(b.dataset.cond === k)));
-        toast(zh ? '切好了' : 'Switched');
-      } catch (err) { toast(err.message); }
-    },
-  }, label)));
-
   const sessSel = h('select.select', { style: { maxWidth: '110px' } },
     Array.from({ length: 11 }, (_, n) => h('option', { value: String(n), selected: n === (c.session ?? 0) },
       String(n).padStart(2, '0'))));
@@ -253,7 +234,6 @@ function classCard(cid, c, zh, refresh) {
       ]),
 
       h('.stack-sm', [
-        h('.field', [h('span.field__label', { style: { color: 'var(--fg-2)' }, text: zh ? '分組條件' : 'Condition' }), condSeg]),
         h('.row.row--tight', [
           h('span', { class: 'field__label', style: { color: 'var(--fg-2)' }, text: zh ? '目前節次' : 'Session' }),
           sessSel,

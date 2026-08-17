@@ -43,7 +43,6 @@
 
         "name":      { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 60" },
         "code":      { ".validate": "newData.isString() && newData.val().matches(/^[a-z0-9_-]{2,20}$/)" },
-        "condition": { ".validate": "newData.isString() && newData.val().matches(/^(agent|blank)$/)" },
         "session":   { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 10" },
         "open":      { ".validate": "newData.isBoolean()" },
         "teacherUid":{ ".validate": "newData.isString()" },
@@ -99,7 +98,7 @@
 
         "agent": {
           "$sid": {
-            ".write": "auth != null && root.child('users').child(auth.uid).child('disabled').val() !== true && root.child('members').child($cid).child(auth.uid).exists() && root.child('classes').child($cid).child('condition').val() === 'agent'"
+            ".write": "auth != null && root.child('users').child(auth.uid).child('disabled').val() !== true && root.child('members').child($cid).child(auth.uid).exists()"
           }
         },
 

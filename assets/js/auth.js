@@ -167,7 +167,7 @@ export async function listAllClasses() {
   return (await dbMod.get(dbMod.ref(db, 'classes'))).val() || {};
 }
 
-export async function createClass({ name, code, condition = 'agent', session = 0, open = true }) {
+export async function createClass({ name, code, session = 0, open = true }) {
   requireStaff();
   const { dbMod, db } = fb;
   const cid = code.toLowerCase().replace(/[^a-z0-9_-]/g, '');
@@ -176,7 +176,7 @@ export async function createClass({ name, code, condition = 'agent', session = 0
   if (exists.exists()) throw new Error('這個班級代碼已經有人用了');
 
   const cls = {
-    name, code: cid, condition, session, open: !!open,
+    name, code: cid, session, open: !!open,
     teacherUid: auth.user.uid,
     teacherEmail: auth.user.email,
     createdAt: Date.now(),

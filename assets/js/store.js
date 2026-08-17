@@ -11,7 +11,7 @@ const LS = 'hwc.v1.';
 /* ---------- 狀態 ---------- */
 export const state = {
   me:   { id: '', name: '', group: '' },
-  cls:  { code: 'demo', condition: 'agent', session: 0 },
+  cls:  { code: 'demo', session: 0 },
   notes: {},        // 觀點畫布貼文
   votes: {},        // { pollId: { userId: choice } }
   work:  {},        // { taskId: any }  各任務作答
@@ -71,8 +71,6 @@ function loadCls() {
   } catch {}
   // 網址參數優先：?class=7a&cond=blank
   if (p.get('class')) state.cls.code = p.get('class').toLowerCase().replace(/[^a-z0-9_-]/g, '');
-  const c = p.get('cond') || p.get('condition');
-  if (c === 'blank' || c === 'agent') state.cls.condition = c;
   persistCls();
 }
 
@@ -127,7 +125,6 @@ export async function initSync() {
     dbMod.onValue(dbMod.ref(db, `classes/${state.cls.code}`), snap => {
       const v = snap.val();
       if (v) {
-        state.cls.condition = v.condition || state.cls.condition;
         state.cls.session = typeof v.session === 'number' ? v.session : state.cls.session;
         state.cls.name = v.name || '';
         persistCls(); emit('cls');

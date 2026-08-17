@@ -2,7 +2,10 @@
 
 /** h('div.card', {onclick}, [children]) */
 export function h(spec, props = null, kids = null) {
-  if (Array.isArray(props)) { kids = props; props = null; }
+  // 第二個參數只有「純物件」才當屬性用。
+  // 字串、數字、DOM 節點、陣列一律視為內容——
+  // 否則 Object.entries('教師') 會變成 setAttribute('0', '教')。
+  if (props != null && !isPlainObject(props)) { kids = props; props = null; }
   const m = /^([a-zA-Z0-9-]+)?((?:[.#][\w-]+)*)$/.exec(spec) || [];
   const el = document.createElement(m[1] || 'div');
   (m[2] || '').split(/(?=[.#])/).filter(Boolean).forEach(tok => {
@@ -22,6 +25,15 @@ export function h(spec, props = null, kids = null) {
   }
   if (kids != null) append(el, kids);
   return el;
+}
+
+/** 只認 {} 或 Object.create(null) 產生的物件，不認 Node、Array、字串 */
+function isPlainObject(v) {
+  if (typeof v !== 'object' || v === null) return false;
+  if (Array.isArray(v)) return false;
+  if (typeof Node !== 'undefined' && v instanceof Node) return false;
+  const proto = Object.getPrototypeOf(v);
+  return proto === Object.prototype || proto === null;
 }
 
 export function append(el, kids) {

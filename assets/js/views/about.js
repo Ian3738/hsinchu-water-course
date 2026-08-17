@@ -28,27 +28,6 @@ export default function about(root) {
   ]));
 
   root.append(h('section.wrap.section--tight.stack', [
-    eyebrow(zh ? '兩種條件' : 'TWO CONDITIONS'),
-    h('.cols-2', [
-      h('.card.card--water', [
-        h('p.card__title', { text: zh ? '實驗組' : 'Experimental' }),
-        h('p.muted', { style: { margin: 0, fontSize: 'var(--t-sm)' }, text: zh
-          ? 'AI agent 進駐空位，以第一人稱陳述立場、說明學習者的提案會對它造成什麼、並回應提問。它不提供事實資料、不評價對錯、不提出解決方案。'
-          : 'An AI agent occupies the position, states a stance in the first person, says what a proposal would mean for the party it speaks for, and answers questions. It supplies no facts, no evaluations, no solutions.' }),
-      ]),
-      h('.card', [
-        h('p.card__title', { text: zh ? '對照組' : 'Control' }),
-        h('p.muted', { style: { margin: 0, fontSize: 'var(--t-sm)' }, text: zh
-          ? '同一套工具，空位維持空白，只標示尚無人為其發言。除此之外，教學內容、時數、教師與任務完全相同。'
-          : 'The same tool; the position stays blank, marked only as having no one to speak for it. Content, hours, teacher and tasks are otherwise identical.' }),
-      ]),
-    ]),
-    h('p.note-line', { text: zh
-      ? '老師在控制台切換，或用網址參數指定：?class=703&cond=agent。'
-      : 'Switch in the console, or set it by URL: ?class=703&cond=agent.' }),
-  ]));
-
-  root.append(h('section.wrap.section--tight.stack', [
     eyebrow(zh ? '幾件要說清楚的事' : 'A FEW THINGS TO BE CLEAR ABOUT'),
     h('.stack-sm', [
       ['模擬器不是水文推估', 'The simulators are not hydrological estimates',

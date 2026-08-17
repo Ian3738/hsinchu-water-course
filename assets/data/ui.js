@@ -101,11 +101,8 @@ export const UI = {
   /* 教師 */
   teacher:      { zh: '教師控制台', en: 'Teacher console' },
   classCode:    { zh: '班級代碼', en: 'Class code' },
-  condition:    { zh: '分組條件', en: 'Condition' },
-  condAgent:    { zh: '實驗組・AI 代言', en: 'Experimental · AI speaks' },
-  condBlank:    { zh: '對照組・空位留白', en: 'Control · blank position' },
   exportAll:    { zh: '匯出全班資料', en: 'Export class data' },
-  exportEna:    { zh: '匯出話語編碼（ENA）', en: 'Export discourse codes (ENA)' },
+  exportTna:    { zh: '匯出轉移序列（TNA）', en: 'Export transition sequences (TNA)' },
   liveSync:     { zh: '即時同步', en: 'Live sync' },
   localOnly:    { zh: '僅存本機', en: 'Local only' },
   connected:    { zh: '已連線', en: 'Connected' },

@@ -749,3 +749,29 @@ mark.vague {
 .bridge__list li::before {
   content: "「"; position: absolute; left: 0; color: var(--water-lit);
 }
+
+/* ---------------------------------------------------------
+   掛名
+   --------------------------------------------------------- */
+.credits {
+  display: flex; align-items: baseline; gap: var(--s3);
+  flex-wrap: wrap;
+  margin: 0;
+  padding-top: var(--s3);
+  border-top: 1px solid var(--rule);
+  max-width: none;
+}
+.credits__label {
+  font-family: var(--f-mono);
+  font-size: var(--t-micro);
+  letter-spacing: .22em;
+  text-transform: uppercase;
+  color: var(--water-lit);
+  flex-shrink: 0;
+}
+.credits__names {
+  font-family: var(--f-display);
+  font-size: var(--t-sm);
+  color: var(--fg-2);
+  letter-spacing: .06em;
+}

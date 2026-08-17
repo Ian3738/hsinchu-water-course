@@ -7,7 +7,7 @@
 
 export const META = {
   title: { zh: '你家水龍頭的水，是跟誰借的？', en: 'Where is the water in your tap borrowed from?' },
-  sub:   { zh: '頭前溪流域・十節在地探究', en: 'Touqian River Basin · A ten-session local inquiry' },
+  sub:   { zh: '探究頭前溪流域', en: 'An inquiry into the Touqian River basin' },
   tail:  { zh: '跟誰借的？還得回去嗎？', en: 'Borrowed from whom? And can it be given back?' },
 };
 

@@ -89,9 +89,7 @@ export default function home(root) {
         h('p', { style: { margin: 0, fontSize: 'var(--t-sm)' }, text: zh
           ? `目前上到第 ${state.cls.session} 節・畫布上有 ${notes} 則貼文`
           : `Currently at session ${state.cls.session} · ${notes} notes on the canvas` }),
-        h('p.muted', { style: { margin: 0, fontSize: 'var(--t-xs)' }, text: zh
-          ? `班級 ${state.cls.code}・${state.cls.condition === 'agent' ? '實驗組（AI 代言）' : '對照組（空位留白）'}`
-          : `Class ${state.cls.code} · ${state.cls.condition === 'agent' ? 'experimental' : 'control'}` }),
+        h('p.muted', { style: { margin: 0, fontSize: 'var(--t-xs)' }, text: zh ? `班級 ${state.cls.code}` : `Class ${state.cls.code}` }),
       ]),
       h('a.btn.btn--sm', { href: '#/teacher' }, t('teacher')),
     ]),

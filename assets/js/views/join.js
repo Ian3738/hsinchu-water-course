@@ -74,7 +74,7 @@ export default function join(root, { params }) {
       if (!c) { toast(zh ? '請輸入班級代碼' : 'Enter a class code'); return; }
       try {
         const cls = await joinClass(c);
-        setClass({ code: c, condition: cls.condition, session: cls.session }, { broadcast: false });
+        setClass({ code: c, session: cls.session }, { broadcast: false });
         toast(zh ? `加入「${cls.name || c}」了` : `Joined ${cls.name || c}`);
         location.hash = '#/';
         location.reload();
@@ -101,7 +101,7 @@ export default function join(root, { params }) {
         eyebrow(zh ? '你已經在的班級' : 'YOUR CLASSES'),
         h('.stack-sm', mine.map(([cid, c]) => h('a.map__item', {
           href: '#/',
-          onclick: () => { setClass({ code: cid, condition: c.condition, session: c.session }, { broadcast: false }); },
+          onclick: () => { setClass({ code: cid, session: c.session }, { broadcast: false }); },
         }, [
           h('span.map__n', { text: String(c.session ?? 0).padStart(2, '0') }),
           h('.map__body', [

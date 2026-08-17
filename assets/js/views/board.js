@@ -2,8 +2,7 @@
    觀點畫布
    ・每則貼文須標示發言者身分與關切焦點
    ・保留數個「還沒有人替他說話」的位置
-   ・實驗組由 AI agent 進駐空位，以第一人稱發言並回應提問
-   ・對照組空位維持空白，僅標示無人代言
+   ・由 AI agent 進駐空位，以第一人稱發言並回應提問
    ============================================================ */
 import { h, clear, eyebrow, field, toast, esc, countWords } from '../ui.js';
 import { L, t, getLang } from '../i18n.js';
@@ -97,9 +96,8 @@ function paintIdentity(host, zh) {
                      text: zh ? '你是誰' : 'WHO ARE YOU' }),
     nameInput, groupInput,
     h('span.grow'),
-    h('span.pill', { data: { tone: state.cls.condition === 'agent' ? 'agent' : 'local' } }, [
-      h('span.pill__dot'),
-      state.cls.condition === 'agent' ? t('condAgent') : t('condBlank'),
+    h('span.pill', { data: { tone: 'agent' } }, [
+      h('span.pill__dot'), t('agentLabel'),
     ]),
   ]));
 }
@@ -197,16 +195,7 @@ function slotEl(slot, zh, offs) {
     ]);
   }
 
-  /* 對照組：維持空白，只標示無人代言 */
-  if (!agentEnabled()) {
-    return h('.slot.slot--blank', [
-      h('p.slot__who', { text: L(slot.who) }),
-      h('p.slot__hint', { text: t('noSpeaker') }),
-      h('p.mono', { style: { fontSize: 'var(--t-micro)', letterSpacing: '.12em', opacity: '.7' }, text: L(slot.tag) }),
-    ]);
-  }
-
-  /* 實驗組：AI agent 進駐 */
+  /* AI agent 進駐空位 */
   const box = h('.slot.slot--agent');
   const paint = () => {
     clear(box);
