@@ -1050,3 +1050,11 @@ body:has(.deck) .footer { display: none; }
 /* 頁尾的教師連結藏起來時，不要留下多餘的分隔 */
 #footerTeacher { margin-right: var(--s3); }
 #footerTeacher[hidden] { display: none; }
+
+/* 首頁只有一屏：內容置中，不留多餘的捲動 */
+.home-hero {
+  min-height: calc(100dvh - 74px - 60px);
+  display: grid;
+  align-content: center;
+}
+@media (max-width: 720px) { .home-hero { min-height: calc(100dvh - 130px); } }

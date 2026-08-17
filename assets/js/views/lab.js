@@ -35,7 +35,7 @@ export default async function lab(root, ctx) {
 
   root.append(h('.toolbar', [
     h('.wrap--wide.toolbar__inner', [
-      h('a.btn.btn--sm.btn--ghost', { href: '#/' }, '← ' + (getLang() === 'zh' ? '回總覽' : 'Back to map')),
+      h('a.btn.btn--sm.btn--ghost', { href: '#/map' }, '← ' + (getLang() === 'zh' ? '回總覽' : 'Back to map')),
       h('span.grow'),
       h('a.btn.btn--sm', { href: '#/board' }, getLang() === 'zh' ? '觀點畫布' : 'Perspective Canvas'),
     ]),

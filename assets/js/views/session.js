@@ -9,6 +9,7 @@ import { SLOTS, BY_SLOT } from '../../data/personas.js';
 import { countWordsIn, cloudEl } from '../wordcloud.js';
 import { PUZZLES } from '../../data/puzzles.js';
 import { sceneStep, gateStep, unlocked } from '../gate.js';
+import { isStaff } from '../auth.js';
 
 export default function session(root, { arg, params }) {
   const s = BY_ID[arg];
@@ -43,12 +44,13 @@ export default function session(root, { arg, params }) {
   let gateAt = -1;
   const gate = gateStep(s.id, zh,
     () => { paintDots(); },
+    // 進下一關：真的換節次
     () => {
-      // 解完先看這一節的反思，再由那裡進下一節
-      if (gateAt >= 0 && gateAt + 1 < steps.length) go(gateAt + 1);
-      else if (i < SESSIONS.length - 1) location.hash = `#/s/${SESSIONS[i + 1].id}`;
+      if (i < SESSIONS.length - 1) location.hash = `#/s/${SESSIONS[i + 1].id}`;
       else location.hash = '#/reflect';
-    });
+    },
+    // 先寫反思：留在這一節，翻到最後一張
+    () => { if (gateAt >= 0 && gateAt + 1 < steps.length) go(gateAt + 1); });
   if (gate) { gateAt = steps.length; push(gate); }
 
   // 最後一張：反思
@@ -79,8 +81,8 @@ export default function session(root, { arg, params }) {
   const nextBtn = h('button.btn.btn--sm.btn--primary', { type: 'button', onclick: () => go(at + 1) }, '→');
 
   function go(k) {
-    // 鎖住的關卡：沒解開就過不去
-    if (gateAt >= 0 && k > gateAt && !unlocked(s.id)) {
+    // 鎖住的關卡：沒解開就過不去。老師備課要能直接翻，不擋。
+    if (gateAt >= 0 && k > gateAt && !unlocked(s.id) && !isStaff()) {
       toast(zh ? '這一關還沒解開。' : 'This one is still locked.');
       k = gateAt;
     }
@@ -105,7 +107,7 @@ export default function session(root, { arg, params }) {
 
   root.append(h('.toolbar', [
     h('.wrap--wide.toolbar__inner', [
-      h('a.btn.btn--sm.btn--ghost', { href: '#/' }, '← ' + t('back')),
+      h('a.btn.btn--sm.btn--ghost', { href: '#/map' }, '← ' + t('back')),
       prevBtn,
       h('span.deck__nav', [dots, counter]),
       nextBtn,

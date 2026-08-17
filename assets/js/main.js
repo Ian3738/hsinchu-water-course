@@ -22,6 +22,7 @@ const ROUTES = [
   { re: /^\/admin$/,           view: () => import('./views/admin.js') },
   { re: /^\/join$/,            view: () => import('./views/join.js') },
   { re: /^\/reflect$/,         view: () => import('./views/reflect.js') },
+  { re: /^\/map$/,             view: () => import('./views/map.js') },
   { re: /^\/about$/,           view: () => import('./views/about.js') },
 ];
 
