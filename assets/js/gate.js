@@ -54,7 +54,7 @@ function checkWork(gate) {
 /* ============================================================
    畫面
    ============================================================ */
-export function gateStep(sid, zh, onCleared) {
+export function gateStep(sid, zh, onCleared, onNext) {
   const p = PUZZLES[sid];
   if (!p) return null;
   const g = p.gate;
@@ -75,6 +75,13 @@ export function gateStep(sid, zh, onCleared) {
             h('h2.task__title', { style: { margin: 0 }, text: zh ? '這一關過了' : 'Cleared' }),
           ]),
           h('p', { style: { fontSize: 'var(--t-md)', lineHeight: 1.75 }, text: g.after[zh ? 'zh' : 'en'] }),
+          // 解開之後要有明顯的出口。只放工具列的箭頭，學生會卡在這裡。
+          h('.row', [
+            h('button.btn.btn--primary.btn--lg', {
+              type: 'button',
+              onclick: () => onNext?.(),
+            }, zh ? '進下一關 →' : 'Next case →'),
+          ]),
         ]),
       );
       return;

@@ -1030,3 +1030,23 @@ body:has(.deck) .footer { display: none; }
 /* 投影模式：文字雲放大，這是要給全班看的 */
 :root[data-projection="on"] .talk__split { grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); }
 :root[data-projection="on"] .talk__cloud .cloud { min-height: 34vh; }
+
+/* 背景音樂開關 */
+.bgm {
+  display: inline-grid; place-items: center;
+  width: 34px; height: 34px;
+  background: transparent;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-md);
+  color: var(--fg-3);
+  cursor: pointer;
+  transition: color var(--dur) var(--ease), border-color var(--dur) var(--ease),
+              background var(--dur) var(--ease);
+}
+.bgm:hover { color: var(--fg); border-color: var(--water-lit); }
+.bgm[aria-pressed="true"] { color: var(--water-lit); border-color: var(--water-lit); background: var(--water-film); }
+.bgm[hidden] { display: none; }
+
+/* 頁尾的教師連結藏起來時，不要留下多餘的分隔 */
+#footerTeacher { margin-right: var(--s3); }
+#footerTeacher[hidden] { display: none; }

@@ -5,12 +5,14 @@ import { L, t, getLang } from '../i18n.js';
 import { SESSIONS, RULES, META } from '../../data/course.js';
 import { state, notesList } from '../store.js';
 import { unlocked, clearedCount } from '../gate.js';
+import { auth, signedIn } from '../auth.js';
 
 export default function home(root) {
   const zh = getLang() === 'zh';
   root.classList.add('home-tight');
   const done = clearedCount();
   const nextUp = SESSIONS.find(x => !unlocked(x.id)) || SESSIONS[0];
+  const needLogin = auth.available && !signedIn();
 
   /* ---------- 第一屏 ---------- */
   const headline = zh
@@ -22,10 +24,11 @@ export default function home(root) {
     headline,
     h('p.lede', { text: L(META.sub) }),
     h('.row', [
-      h('a.btn.btn--primary.btn--lg', { href: `#/s/${nextUp.id}` },
-        done ? (zh ? '接著上' : 'Continue') : t('enterCourse')),
-      h('a.btn.btn--lg', { href: '#/board' }, t('openBoard')),
-      done ? h('a.btn.btn--lg', { href: '#/reflect' }, zh ? '我的軌跡' : 'My trail') : null,
+      h('a.btn.btn--primary.btn--lg', { href: needLogin ? '#/join' : `#/s/${nextUp.id}` },
+        needLogin ? (zh ? '登入後開始上課' : 'Sign in to start')
+                  : done ? (zh ? '接著上' : 'Continue') : t('enterCourse')),
+      h('a.btn.btn--lg', { href: needLogin ? '#/join' : '#/board' }, t('openBoard')),
+      (!needLogin && done) ? h('a.btn.btn--lg', { href: '#/reflect' }, zh ? '我的軌跡' : 'My trail') : null,
     ].filter(Boolean)),
     h('p.note-line', { text: L(META.tail) }),
   ]));
@@ -34,7 +37,7 @@ export default function home(root) {
   const item = s => {
     const cleared = unlocked(s.id);
     return h('a.map__item', {
-      href: `#/s/${s.id}`,
+      href: needLogin ? '#/join' : `#/s/${s.id}`,
       data: { done: String(cleared), current: String(s.id === nextUp.id) },
     }, [
       h('span.map__n', { text: String(s.n).padStart(2, '0') }),

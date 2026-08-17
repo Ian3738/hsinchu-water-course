@@ -15,7 +15,7 @@ export const CONFIG = {
   /* 版本。index.html 的 <meta name="build"> 要跟這個一致；
      不一致代表瀏覽器混用了新舊 JS，網站會直接提示重新整理。
      每次改版都要一起更新這兩個地方。 */
-  build: '20260817-1959',
+  build: '20260817-2013',
 
   /* ---- Firebase：登入、權限、跨裝置即時同步 ----
      專案 hsinchu-water-course（新加坡節點）。

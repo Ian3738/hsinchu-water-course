@@ -7,6 +7,7 @@ import { initSync, state, subscribe, sync, setClass } from './store.js';
 import { initAuth, onAuth, auth, signIn, signOut, isStaff, isAdmin, signedIn } from './auth.js';
 import { SESSIONS, BY_ID, META } from '../data/course.js';
 import { CONFIG } from '../../config.js';
+import { bgmButton, restoreBgm } from './bgm.js';
 
 const main = qs('#main');
 const topnav = qs('#topnav');
@@ -79,10 +80,28 @@ function setBackground(path) {
   next.src = src;
 }
 
+/* 沒登入不能上課。
+   例外：關於頁與入班頁一定要開，不然沒有地方可以登入。
+   另一個例外：Firebase 連不上時不擋——網路出問題不該把整班鎖在外面。 */
+const OPEN_PATHS = /^\/(about|join)?$/;
+
+function needsSignIn(path) {
+  if (!auth.available) return false;      // 沒有帳號系統就不擋
+  if (!auth.ready) return false;          // 還在確認登入狀態，先放行
+  if (signedIn()) return false;
+  return !OPEN_PATHS.test(path);
+}
+
 let currentCleanup = null;
 
 async function render() {
   const { path, params } = parseHash();
+
+  if (needsSignIn(path)) {
+    location.hash = '#/join';
+    return;
+  }
+
   setBackground(path);
   for (const r of ROUTES) {
     const m = r.re.exec(path);
@@ -129,13 +148,14 @@ function paintChrome() {
     }, 'EN'),
   ]);
   topnav.append(seg);
+  topnav.append(bgmButton());
 
-  // 同步狀態
-  const live = sync.mode === 'live';
-  topnav.append(h('.pill', { data: { tone: live ? 'live' : 'local' }, title: live ? t('connected') : t('localOnly') }, [
-    h('span.pill__dot'),
-    live ? t('liveSync') : t('localOnly'),
-  ]));
+  // 同步狀態：只在真的連上時顯示。沒連上是常態，不需要一直提醒學生。
+  if (sync.mode === 'live') {
+    topnav.append(h('.pill', { data: { tone: 'live' }, title: t('connected') }, [
+      h('span.pill__dot'), t('liveSync'),
+    ]));
+  }
 
   // 登入
   const zh = getLang() === 'zh';
@@ -181,6 +201,10 @@ function paintChrome() {
   // 進度帶：目前上到第幾節
   const pct = (state.cls.session / 10) * 100;
   qs('#streamFill').style.width = Math.max(3, pct) + '%';
+
+  // 教師控制台只給老師與管理員看到，學生端不該出現入口
+  const tLink = qs('#footerTeacher');
+  if (tLink) tLink.hidden = !isStaff();
 
   qs('#brandName').textContent = getLang() === 'zh' ? '探究頭前溪流域' : 'The Touqian Basin';
   document.title = getLang() === 'zh'
@@ -253,11 +277,42 @@ function checkBuild() {
   console.warn('build mismatch: html=' + meta + ' js=' + CONFIG.build);
 }
 
+/* ---------- Service worker ----------
+   程式走網路優先，改版立刻生效；網路不通時回頭用快取。
+   網址加 ?nosw=1 可以整個關掉。 */
+async function initSW() {
+  if (!('serviceWorker' in navigator)) return;
+  const kill = new URLSearchParams(location.search).has('nosw');
+  if (kill) {
+    const regs = await navigator.serviceWorker.getRegistrations();
+    await Promise.all(regs.map(r => r.unregister()));
+    if (window.caches) (await caches.keys()).forEach(k => caches.delete(k));
+    console.warn('service worker 已關閉並清除快取');
+    return;
+  }
+  try {
+    const reg = await navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' });
+    reg.update();
+    // 新版接手之後重新整理一次，學生就不會停在舊畫面
+    let reloaded = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (reloaded) return;
+      reloaded = true;
+      location.reload();
+    });
+  } catch (e) {
+    console.warn('service worker 註冊失敗', e);
+  }
+}
+
 /* ---------- 啟動 ---------- */
 async function boot() {
   checkBuild();
-  await initAuth();
-  await initSync();
+  initSW();
+  restoreBgm();
+  // 登入與同步都不是上課的必要條件。任一環節壞掉，課程本身還是要能開。
+  try { await initAuth(); } catch (e) { console.warn('登入初始化失敗', e); }
+  try { await initSync(); } catch (e) { console.warn('同步初始化失敗', e); }
   onAuth(() => { paintChrome(); render(); });
   subscribe(what => {
     if (what === 'cls' || what === 'sync') paintChrome();

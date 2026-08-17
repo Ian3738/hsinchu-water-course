@@ -57,7 +57,7 @@ export default function teacher(root) {
         field(zh ? '目前節次' : 'Current session', sessSel),
       ]),
       h('.row.row--tight', [
-        pill(sync.mode === 'live' ? t('liveSync') : t('localOnly'), sync.mode === 'live' ? 'live' : 'local'),
+        sync.mode === 'live' ? pill(t('liveSync'), 'live') : null,
         pill(engine() === 'live' ? (zh ? 'AI：連線模式' : 'AI: live') : (zh ? 'AI：腳本模式' : 'AI: scripted'), 'agent'),
         pill(`${Object.keys(state.peers || {}).length} ${t('students')}`, ''),
       ]),

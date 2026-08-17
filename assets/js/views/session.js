@@ -41,7 +41,14 @@ export default function session(root, { arg, params }) {
 
   // 倒數第二張：鎖。沒解開不能往下一關。
   let gateAt = -1;
-  const gate = gateStep(s.id, zh, () => { paintDots(); });
+  const gate = gateStep(s.id, zh,
+    () => { paintDots(); },
+    () => {
+      // 解完先看這一節的反思，再由那裡進下一節
+      if (gateAt >= 0 && gateAt + 1 < steps.length) go(gateAt + 1);
+      else if (i < SESSIONS.length - 1) location.hash = `#/s/${SESSIONS[i + 1].id}`;
+      else location.hash = '#/reflect';
+    });
   if (gate) { gateAt = steps.length; push(gate); }
 
   // 最後一張：反思
@@ -386,6 +393,8 @@ function bannedList(zh) {
    第二題是這門課的核心，所以每節都問一次。
    ============================================================ */
 function reflectStep(s, zh) {
+  const idx = SESSIONS.findIndex(x => x.id === s.id);
+  const nextHref = idx >= 0 && idx < SESSIONS.length - 1 ? `#/s/${SESSIONS[idx + 1].id}` : null;
   const id = `reflect-${s.id}`;
   const saved = myWork(id) || {};
 
@@ -424,7 +433,9 @@ function reflectStep(s, zh) {
       h('.row', [
         h('button.btn.btn--primary', { type: 'button', onclick: () => { save(); toast(zh ? '記下來了' : 'Saved'); } },
           zh ? '記下來' : 'Save'),
-        h('a.btn', { href: '#/reflect' }, zh ? '看我整條軌跡' : 'See my whole trail'),
+        nextHref
+          ? h('a.btn.btn--water', { href: nextHref }, zh ? '進下一關 →' : 'Next case →')
+          : h('a.btn.btn--water', { href: '#/reflect' }, zh ? '看我整條軌跡' : 'See my whole trail'),
       ]),
     ]),
   ]);

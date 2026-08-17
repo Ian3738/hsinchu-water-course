@@ -50,24 +50,50 @@ export async function initAuth() {
     // 從轉址流程回來時把結果收掉（手機上 popup 常被擋，會走 redirect）
     try { await authMod.getRedirectResult(a); } catch (e) { console.warn('redirect result', e); }
 
+    /* 這裡以前只 await 一個永遠可能不 resolve 的 Promise。
+       只要 onAuthStateChanged 沒觸發，或裡面任何一步丟例外，
+       整個啟動流程就停住，學生看到的是一片空白。
+       現在：任何錯誤都吞掉，而且設上限時間，時間到就先讓課程跑起來。 */
+    let settled = false;
     await new Promise(resolve => {
-      authMod.onAuthStateChanged(a, async u => {
-        if (!u) {
-          auth.user = null; auth.role = null; auth.disabled = false; auth.classes = {};
-        } else {
-          auth.user = {
-            uid: u.uid,
-            email: (u.email || '').toLowerCase(),
-            name: u.displayName || (u.email || '').split('@')[0],
-            photo: u.photoURL || '',
-          };
-          await bootstrapUser();
-          await loadMyClasses();
-        }
-        auth.ready = true;
-        emit();
-        resolve();
-      });
+      const done = () => { if (!settled) { settled = true; resolve(); } };
+      const timer = setTimeout(() => {
+        if (!settled) console.warn('登入狀態等太久，先讓課程跑起來');
+        done();
+      }, 6000);
+
+      try {
+        authMod.onAuthStateChanged(a, async u => {
+          try {
+            if (!u) {
+              auth.user = null; auth.role = null; auth.disabled = false; auth.classes = {};
+            } else {
+              auth.user = {
+                uid: u.uid,
+                email: (u.email || '').toLowerCase(),
+                name: u.displayName || (u.email || '').split('@')[0],
+                photo: u.photoURL || '',
+              };
+              await bootstrapUser();
+              await loadMyClasses();
+            }
+          } catch (err) {
+            // 讀不到自己的資料就當作沒登入，課還是要能上
+            console.warn('讀取帳號資料失敗，改用未登入模式', err);
+            auth.error = err.message || String(err);
+          }
+          auth.ready = true;
+          emit();
+          clearTimeout(timer);
+          done();
+        }, err => {
+          console.warn('登入狀態監聽失敗', err);
+          auth.ready = true; emit(); clearTimeout(timer); done();
+        });
+      } catch (err) {
+        console.warn('登入服務無法啟動', err);
+        auth.ready = true; emit(); clearTimeout(timer); done();
+      }
     });
   } catch (e) {
     console.warn('登入服務啟動失敗', e);
