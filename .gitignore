@@ -6,8 +6,8 @@
 secrets.json
 config.local.js
 
-# 影片檔通常太大，用 Git LFS 或放外部空間
-media/*.mp4
+# 課程影片直接進版控（各約 6～13 MB，遠低於 GitHub 單檔 100 MB 上限）
+# 之後若換成大檔，再改用 Git LFS 或外部空間
 media/*.mov
 
 .DS_Store

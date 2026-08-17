@@ -1,49 +1,124 @@
 /* 節次頁 — 依課程資料渲染各種區塊 */
-import { h, eyebrow, datum, clear, toast, countWords } from '../ui.js';
+import { h, append, eyebrow, field, datum, clear, toast, countWords, debounce } from '../ui.js';
 import { L, t, getLang } from '../i18n.js';
 import { SESSIONS, BY_ID } from '../../data/course.js';
 import { BANNED } from '../../data/ui.js';
 import { CONFIG } from '../../../config.js';
-import { state, castVote, voteTally, subscribe, setClass, saveWork, myWork } from '../store.js';
+import { state, castVote, voteTally, subscribe, setClass, saveWork, myWork, allWork } from '../store.js';
 import { SLOTS, BY_SLOT } from '../../data/personas.js';
+import { PUZZLES } from '../../data/puzzles.js';
+import { sceneStep, gateStep, unlocked } from '../gate.js';
 
-export default function session(root, { arg }) {
+export default function session(root, { arg, params }) {
   const s = BY_ID[arg];
   if (!s) { root.append(h('.wrap.section', [h('h1.ask', { text: 'Not found' })])); return; }
   const zh = getLang() === 'zh';
   const i = SESSIONS.findIndex(x => x.id === s.id);
   const offs = [];
 
-  /* ---- 節次抬頭 ---- */
-  root.append(h('section.wrap--wide.section.stack.enter', [
+  /* ============================================================
+     這一節是簡報轉過來的，所以維持簡報的樣子：一頁一張，左右翻。
+     不做長捲頁——投影時看不到下面，學生也不知道現在該看哪裡。
+     ============================================================ */
+
+  const steps = [];
+
+  const push = el => { if (el) { el.classList.add('deck__step'); steps.push(el); } };
+
+  // 第一張：關卡封面
+  push(h('section.wrap--wide.stack', [
     eyebrow(`SESSION ${String(s.n).padStart(2, '0')} · ${L(s.sub)}`),
     h('h1.ask.ask--wide', { text: L(s.title) }),
     h('p.note-line', { text: `${s.mins} ${t('minutes')}` }),
   ]));
 
-  /* ---- 區塊 ---- */
-  const body = h('div');
-  root.append(body);
-  s.blocks.forEach(b => {
-    const el = renderBlock(b, s, zh, offs);
-    if (el) body.append(el);
-  });
+  // 第二張：現場。先有事情發生，才有資料要查。
+  push(sceneStep(s.id, zh));
 
-  /* ---- 底部導覽 ---- */
-  const prev = i > 0 ? SESSIONS[i - 1] : null;
-  const next = i < SESSIONS.length - 1 ? SESSIONS[i + 1] : null;
+  // 中間：證據與任務
+  s.blocks.forEach(b => push(renderBlock(b, s, zh, offs)));
+
+  // 倒數第二張：鎖。沒解開不能往下一關。
+  let gateAt = -1;
+  const gate = gateStep(s.id, zh, () => { paintDots(); });
+  if (gate) { gateAt = steps.length; push(gate); }
+
+  // 最後一張：反思
+  push(reflectStep(s, zh));
+
+  const deck = h('.deck', steps);
+  root.append(deck);
+
+  /* ---- 翻頁 ---- */
+  let at = Math.min(Math.max(0, Number(params?.get('p')) || 0), steps.length - 1);
+
+  const dots = h('.deck__dots', steps.map((_, k) => h('button.deck__dot', {
+    type: 'button', 'aria-label': `${k + 1} / ${steps.length}`,
+    onclick: () => go(k),
+  })));
+
+  const counter = h('span.deck__count');
+
+  /** 鎖之後的點畫成鎖住的樣子 */
+  function paintDots() {
+    const open = gateAt < 0 || unlocked(s.id);
+    [...dots.children].forEach((d, n) => {
+      d.toggleAttribute('data-locked', !open && n > gateAt);
+      d.toggleAttribute('data-gate', gateAt >= 0 && n === gateAt);
+    });
+  }
+  const prevBtn = h('button.btn.btn--sm', { type: 'button', onclick: () => go(at - 1) }, '←');
+  const nextBtn = h('button.btn.btn--sm.btn--primary', { type: 'button', onclick: () => go(at + 1) }, '→');
+
+  function go(k) {
+    // 鎖住的關卡：沒解開就過不去
+    if (gateAt >= 0 && k > gateAt && !unlocked(s.id)) {
+      toast(zh ? '這一關還沒解開。' : 'This one is still locked.');
+      k = gateAt;
+    }
+    // 翻過頭就換節次
+    if (k < 0) {
+      if (i > 0) location.hash = `#/s/${SESSIONS[i - 1].id}?p=99`;
+      return;
+    }
+    if (k >= steps.length) {
+      if (i < SESSIONS.length - 1) location.hash = `#/s/${SESSIONS[i + 1].id}`;
+      else location.hash = '#/reflect';
+      return;
+    }
+    at = k;
+    steps.forEach((el, n) => el.toggleAttribute('hidden', n !== at));
+    [...dots.children].forEach((d, n) => d.setAttribute('aria-current', String(n === at)));
+    counter.textContent = `${at + 1} / ${steps.length}`;
+    paintDots();
+    prevBtn.toggleAttribute('aria-disabled', at === 0 && i === 0);
+    deck.scrollTop = 0;
+  }
+
   root.append(h('.toolbar', [
     h('.wrap--wide.toolbar__inner', [
       h('a.btn.btn--sm.btn--ghost', { href: '#/' }, '← ' + t('back')),
-      prev ? h('a.btn.btn--sm', { href: `#/s/${prev.id}` }, `← ${String(prev.n).padStart(2, '0')}`) : null,
-      h('span.grow'),
-      h('button.btn.btn--sm', {
+      prevBtn,
+      h('span.deck__nav', [dots, counter]),
+      nextBtn,
+      h('button.btn.btn--sm.btn--ghost', {
         type: 'button',
         onclick: () => { setClass({ session: s.n }); toast(zh ? `已標記為目前進度：第 ${s.n} 節` : `Marked as current: session ${s.n}`); },
-      }, zh ? '設為目前進度' : 'Set as current'),
-      next ? h('a.btn.btn--sm.btn--primary', { href: `#/s/${next.id}` }, `${String(next.n).padStart(2, '0')} →`) : null,
+      }, zh ? '設為進度' : 'Set current'),
     ]),
   ]));
+
+  go(at);
+
+  /* ---- 左右鍵翻頁；交給這裡處理，main.js 就不再換節次 ---- */
+  const onKey = e => {
+    if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.target.isContentEditable) return;
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(at + 1); }
+    if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); go(at - 1); }
+  };
+  window.addEventListener('keydown', onKey, true);
+  offs.push(() => window.removeEventListener('keydown', onKey, true));
 
   return () => offs.forEach(fn => fn());
 }
@@ -221,7 +296,8 @@ function voteWidget(b, zh, offs) {
   const paint = () => {
     clear(box);
     const { tally, total, mine } = voteTally(b.id);
-    box.append(
+    // 用會過濾 null 的 append，不能用原生的——原生會把 null 印成 "null"
+    append(box, [
       h('h2.ask', { text: L(b.q) }),
       b.note ? h('p.note-line', { text: L(b.note) }) : null,
       h('.row', b.options.map(o => h('button.btn' + (mine === o.id ? '.btn--primary' : ''), {
@@ -240,7 +316,7 @@ function voteWidget(b, zh, offs) {
         ]);
       })) : null,
       total ? h('p.muted', { style: { fontSize: 'var(--t-xs)' }, text: (zh ? '共 ' : '') + total + (zh ? ' 票' : ' votes') }) : null,
-    );
+    ]);
   };
   paint();
   offs.push(subscribe(w => { if (w === 'votes') paint(); }));
@@ -298,4 +374,56 @@ function bannedList(zh) {
       },
       text: w,
     })));
+}
+
+/* ============================================================
+   每節的反思
+   問三件事：改了什麼想法、誰還沒被算進去、還想追什麼。
+   第二題是這門課的核心，所以每節都問一次。
+   ============================================================ */
+function reflectStep(s, zh) {
+  const id = `reflect-${s.id}`;
+  const saved = myWork(id) || {};
+
+  const changed = h('textarea.textarea', {
+    value: saved.changed || '',
+    placeholder: zh ? '上這節之前我以為……現在我會說……' : 'Before this session I thought... now I would say...',
+  });
+  const missing = h('textarea.textarea', {
+    value: saved.missing || '',
+    placeholder: zh ? '今天討論的時候，還有誰沒被算進去？' : "Who still wasn't counted in today's discussion?",
+  });
+  const chase = h('textarea.textarea', {
+    value: saved.chase || '',
+    placeholder: zh ? '我還想知道……' : 'I still want to know...',
+  });
+
+  const done = h('.doneline', [h('.doneline__dot'),
+    h('span', { text: zh ? '第二題有寫，而且不是寫「沒有」' : 'Question two answered, and not with "nobody"' })]);
+
+  const save = debounce(() => {
+    saveWork(id, { changed: changed.value, missing: missing.value, chase: chase.value, session: s.n });
+    const ok = missing.value.trim().length > 2 && !/^(沒有|無|none|no)$/i.test(missing.value.trim());
+    done.dataset.done = String(ok);
+  }, 600);
+  [changed, missing, chase].forEach(el => el.addEventListener('input', save));
+
+  const box = h('section.wrap--wide.stack', [
+    eyebrow(zh ? `第 ${s.n} 節・回頭想一下` : `SESSION ${s.n} · LOOK BACK`),
+    h('.paper.stack', [
+      h('h2.task__title', { text: zh ? '這一節結束之前' : 'Before this session ends' }),
+      field(zh ? '我改變了什麼想法' : 'What changed in my thinking', changed),
+      field(zh ? '今天還有誰沒被算進去' : 'Who still was not counted', missing,
+            zh ? '這一題是這門課的重點' : 'This is the core question of the course'),
+      field(zh ? '我還想追什麼' : 'What I still want to chase', chase),
+      done,
+      h('.row', [
+        h('button.btn.btn--primary', { type: 'button', onclick: () => { save(); toast(zh ? '記下來了' : 'Saved'); } },
+          zh ? '記下來' : 'Save'),
+        h('a.btn', { href: '#/reflect' }, zh ? '看我整條軌跡' : 'See my whole trail'),
+      ]),
+    ]),
+  ]);
+  save();
+  return box;
 }

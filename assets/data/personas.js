@@ -45,6 +45,22 @@ export const SLOTS = [
       zh: '你們要決定取走多少。決定之前，要不要先看看我剩下多少？',
       en: 'You are deciding how much to take. Before you do, will you look at what I have left?',
     },
+    /* 針對模擬器的設定回話。學生把閘門拉到某個比例，這個對象直接回應那個數字。
+       門檻與 flow.js 的模型一致：下游低於 20 份魚上不去，低於 10 份河床裸露。 */
+    onSim: [
+      { when: m => m.down < 10,
+        zh: '你把我留下不到一成。這種時候我不是一條溪，是一條有水痕的路。',
+        en: 'You have left me under a tenth. At that point I am not a river, I am a road with a watermark.' },
+      { when: m => m.down < 20,
+        zh: '剩這麼多，有些地方魚就上不去了。牠們也不在你們的教室裡。',
+        en: 'With that much left, fish cannot get past certain places. They are not in your classroom either.' },
+      { when: m => m.down < 45,
+        zh: '這樣我還流得動。枯水期會不會也這樣，我不知道——那要你們自己去查。',
+        en: 'I can still move at that. Whether the dry season looks the same, I do not know; that is yours to look up.' },
+      { when: () => true,
+        zh: '你留給我的比拿走的多。那園區和你家的水夠嗎？那不是我要回答的。',
+        en: 'You left me more than you took. Whether the park and your home have enough is not mine to answer.' },
+    ],
     qa: [
       { k: ['多少', '流量', '幾', 'how much', 'flow'],
         zh: '我不會算數字，那要你們自己去查。我只知道枯水期的時候，石頭露出來的面積變大了。',
@@ -76,6 +92,17 @@ export const SLOTS = [
       zh: '你們的方案裡，我這一季要種什麼？',
       en: 'In your plan, what do I plant this season?',
     },
+    onSim: [
+      { when: m => m.irrigation < m.irrigationNeed,
+        zh: '你這樣調，我的田不夠水。停一季，隔年那塊土就不一樣了。',
+        en: 'At that setting my fields come up short. Stop one season and the soil is different the next year.' },
+      { when: m => m.diverted > 80,
+        zh: '圳裡是滿的，可是那些水多半不是進我的田，是過我的田。',
+        en: 'The canal is full, but most of that water is not going into my fields; it is going past them.' },
+      { when: () => true,
+        zh: '這樣我這一季種得下去。我只是想知道，明年還算不算數。',
+        en: 'I can plant this season at that. I would like to know whether it still holds next year.' },
+    ],
     qa: [
       { k: ['缺水', '不夠', '停灌', 'shortage', 'not enough'],
         zh: '缺水的時候先停的是我們。田停一季，隔年土就不一樣了。',
@@ -166,6 +193,17 @@ export const SLOTS = [
       zh: '你們要決定廢水排哪一條溪。要排的話，那條溪的人現在在這間教室嗎？',
       en: 'You are deciding which creek takes the wastewater. Are the people on that creek in this room?',
     },
+    onSim: [
+      { when: m => (m.effluent ?? 0) >= 0.30,
+        zh: '這個比例，我家的井會跟著變。那時候我們不是不知道，是知道了也來不及。',
+        en: 'At that share my well changes too. Back then we did know; we just knew too late.' },
+      { when: m => (m.effluent ?? 0) >= 0.05,
+        zh: '看起來還好，可是我要喝的。你會用這個數字倒一杯給自己嗎？',
+        en: 'It looks tolerable, but I drink it. Would you pour yourself a glass at that number?' },
+      { when: () => true,
+        zh: '這樣我可以直接取用。我只是想問，為什麼當年不是這個數字。',
+        en: 'At that I can draw from it directly. I only want to ask why it was not this number back then.' },
+    ],
     qa: [
       { k: ['自來水', '接管', 'piped', 'tap water'],
         zh: '那時候不是每一家都有自來水。沒有的那些人家，喝的就是井水。',

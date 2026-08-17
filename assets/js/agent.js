@@ -12,11 +12,20 @@ import { state } from './store.js';
 
 /* ---------- 腳本引擎 ---------- */
 
-function scriptReply(slotId, question) {
+function scriptReply(slotId, question, sim) {
   const p = BY_SLOT[slotId];
   if (!p) return '';
   const lang = getLang();
   const q = (question || '').trim();
+
+  // 帶著模擬設定來問：先針對那組數字回話
+  if (sim && p.onSim) {
+    const hit = p.onSim.find(r => { try { return r.when(sim); } catch { return false; } });
+    if (hit) {
+      const said = hit[lang] || hit.zh;
+      return q ? said + ' ' + scriptReply(slotId, q) : said;
+    }
+  }
 
   // 開場：還沒問問題時，先講立場
   if (!q) return L(p.stance);
@@ -40,7 +49,7 @@ function scriptReply(slotId, question) {
 
 /* ---------- live 引擎 ---------- */
 
-async function liveReply(slotId, question, turns) {
+async function liveReply(slotId, question, turns, sim) {
   const p = BY_SLOT[slotId];
   const lang = getLang();
   const res = await fetch(CONFIG.agentEndpoint, {
@@ -57,6 +66,8 @@ async function liveReply(slotId, question, turns) {
       guardrails: GUARDRAILS[lang] || GUARDRAILS.zh,
       // 讓 agent 知道學生在畫布上提了什麼，才能說「你們的提案會讓我怎樣」
       context: recentProposals(),
+      // 學生正在看的那組模擬數字
+      sim: sim || null,
       history: (turns || []).slice(-8).map(t => ({ role: t.role, text: t.text })),
       question,
     }),
@@ -88,18 +99,18 @@ export function engine() {
  * question 留空 = 請它開場陳述立場。
  * live 失敗時自動退回腳本，課堂不會開天窗。
  */
-export async function speak(slotId, question = '', turns = []) {
+export async function speak(slotId, question = '', turns = [], sim = null) {
   if (engine() === 'live') {
     try {
-      return { text: await liveReply(slotId, question, turns), via: 'live' };
+      return { text: await liveReply(slotId, question, turns, sim), via: 'live' };
     } catch (e) {
       console.warn('live agent 失敗，改用腳本', e);
-      return { text: scriptReply(slotId, question), via: 'script-fallback' };
+      return { text: scriptReply(slotId, question, sim), via: 'script-fallback' };
     }
   }
   // 腳本模式也給一點延遲，讓「正在想」的狀態有意義
   await new Promise(r => setTimeout(r, 380 + Math.random() * 420));
-  return { text: scriptReply(slotId, question), via: 'script' };
+  return { text: scriptReply(slotId, question, sim), via: 'script' };
 }
 
 /** 空位一律由 agent 進駐（已不再分實驗組／對照組） */

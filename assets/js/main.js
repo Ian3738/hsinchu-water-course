@@ -19,6 +19,7 @@ const ROUTES = [
   { re: /^\/teacher$/,         view: () => import('./views/teacher.js') },
   { re: /^\/admin$/,           view: () => import('./views/admin.js') },
   { re: /^\/join$/,            view: () => import('./views/join.js') },
+  { re: /^\/reflect$/,         view: () => import('./views/reflect.js') },
   { re: /^\/about$/,           view: () => import('./views/about.js') },
 ];
 
@@ -214,7 +215,9 @@ function keys(e) {
   }
   // B：觀點畫布
   if (e.key === 'b' || e.key === 'B') location.hash = '#/board';
-  // 左右鍵：上下一節
+  // 左右鍵在節次頁是翻投影片，由 session.js 處理（它會 preventDefault）；
+  // 其他頁面才用來換節次
+  if (e.defaultPrevented) return;
   const { path } = parseHash();
   const m = /^\/s\/([\w-]+)$/.exec(path);
   if (m) {

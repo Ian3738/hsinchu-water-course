@@ -43,8 +43,11 @@
 .btn--lg { min-height: 54px; padding: var(--s4) var(--s6); font-size: var(--t-md); }
 .btn--block { width: 100%; }
 
-/* 紙面板上的按鈕要換配色 */
+/* 紙面板上的按鈕要換配色。
+   注意 .paper a 的優先序比 .btn 高，用 <a> 做的按鈕會被它的 color 蓋掉，
+   文字就跟底色同色看不見了——所以這裡要把 color 明確寫回來。 */
 .paper .btn { --btn-fg: var(--on-paper); --btn-bd: var(--rule-paper); }
+.paper a.btn { color: var(--btn-fg); }
 .paper .btn:hover { --btn-bd: var(--water); --btn-bg: var(--water-film); }
 .paper .btn--primary { --btn-fg: #fff; }
 .paper .btn--water  { --btn-fg: #fff; }
@@ -775,3 +778,99 @@ mark.vague {
   color: var(--fg-2);
   letter-spacing: .06em;
 }
+
+/* ---------------------------------------------------------
+   節次簡報：一頁一張，不捲動
+   --------------------------------------------------------- */
+/* 高度讓版面自己算，不寫死數字：
+   有 .deck 時 main 變成直向 flex，deck 吃掉剩下的高度，工具列釘在後面。
+   頁尾在簡報模式下藏起來，否則整頁還是會多捲一段。 */
+#main:has(.deck) { display: flex; flex-direction: column; min-height: 0; }
+body:has(.deck) .footer { display: none; }
+
+.deck {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  align-content: center;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-block: var(--s5);
+}
+
+.deck__step[hidden] { display: none; }
+
+/* 每一張進來時淡入，翻頁才有節奏感 */
+.deck__step {
+  animation: deckIn .42s var(--ease-out) both;
+  padding-block: 0 !important;
+}
+@keyframes deckIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* 進度點 */
+.deck__nav {
+  display: flex; align-items: center; gap: var(--s3);
+  flex: 1; min-width: 0; justify-content: center;
+}
+.deck__dots { display: flex; gap: 5px; flex-wrap: wrap; justify-content: center; }
+.deck__dot {
+  appearance: none; border: 0; padding: 0;
+  width: 22px; height: 4px; border-radius: 99px;
+  background: var(--rule-strong);
+  cursor: pointer;
+  transition: background var(--dur) var(--ease), width var(--dur) var(--ease);
+}
+.deck__dot:hover { background: var(--water-lit); }
+.deck__dot[aria-current="true"] { background: var(--clay); width: 34px; }
+.deck__count {
+  font-family: var(--f-mono);
+  font-size: var(--t-micro);
+  color: var(--fg-3);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+/* 手機：點太多就藏起來，只留計數 */
+@media (max-width: 720px) {
+  .deck { padding-block: var(--s4); }
+  .deck__dots { display: none; }
+  .deck__nav { flex: 0 0 auto; }
+  .toolbar .btn { flex: 0 0 auto; }
+}
+
+/* 投影模式：整張置中放大 */
+:root[data-projection="on"] .deck { align-content: center; }
+
+/* ---------------------------------------------------------
+   關卡
+   --------------------------------------------------------- */
+.gate__seal {
+  display: inline-grid; place-items: center;
+  width: 30px; height: 30px; border-radius: 50%;
+  background: #2E8B6F; color: #fff;
+  font-size: 16px; font-weight: 700;
+  flex-shrink: 0;
+}
+.gate__row {
+  display: flex; align-items: center; gap: var(--s3);
+  padding: var(--s3);
+  background: #fff;
+  border: 1px solid var(--rule-paper);
+  border-radius: var(--r-md);
+  font-size: var(--t-sm);
+}
+.gate__hint summary {
+  cursor: pointer;
+  font-size: var(--t-xs);
+  color: var(--on-paper-2);
+  font-style: italic;
+}
+.gate__hint[open] summary { color: var(--clay-dim); font-style: normal; font-weight: 600; }
+
+/* 進度點：鎖住的與關卡本身 */
+.deck__dot[data-locked] { background: transparent; box-shadow: inset 0 0 0 1px var(--rule); }
+.deck__dot[data-gate]   { background: var(--agent); }
+.deck__dot[data-gate][aria-current="true"] { background: var(--clay); }

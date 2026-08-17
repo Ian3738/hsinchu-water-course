@@ -3,6 +3,8 @@ import { h, eyebrow } from '../ui.js';
 import { L, t, getLang } from '../i18n.js';
 import { SESSIONS, RULES, META, ROUTE } from '../../data/course.js';
 import { state, notesList } from '../store.js';
+import { unlocked, clearedCount } from '../gate.js';
+import { PUZZLES } from '../../data/puzzles.js';
 
 export default function home(root) {
   const zh = getLang() === 'zh';
@@ -18,10 +20,23 @@ export default function home(root) {
     h('p.lede', { text: L(META.sub) }),
     h('p.note-line', { text: L(META.tail) }),
     h('.row', [
-      h('a.btn.btn--primary.btn--lg', { href: `#/s/${SESSIONS[0].id}` }, t('enterCourse')),
+      h('a.btn.btn--primary.btn--lg', { href: `#/s/${firstUncleared().id}` },
+        clearedCount() ? (zh ? '接著解下一關' : 'Continue the case') : t('enterCourse')),
       h('a.btn.btn--lg', { href: '#/board' }, t('openBoard')),
+      clearedCount() ? h('a.btn.btn--lg', { href: '#/reflect' }, zh ? '我的軌跡' : 'My trail') : null,
+    ].filter(Boolean)),
+    h('.row.row--tight', [
+      h('span.pill', { data: { tone: 'clay' } }, [
+        h('span.pill__dot'),
+        zh ? `借水事件簿　${clearedCount()} / ${Object.keys(PUZZLES).length} 關` 
+           : `Case file ${clearedCount()} / ${Object.keys(PUZZLES).length}`,
+      ]),
     ]),
   ]);
+
+  function firstUncleared() {
+    return SESSIONS.find(x => !unlocked(x.id)) || SESSIONS[0];
+  }
 
   /* ---- 借水路線 ---- */
   const routeStrip = h('section.wrap--wide.section--tight.stack', [
@@ -56,20 +71,24 @@ export default function home(root) {
   const partOne = SESSIONS.filter(s => !s.part);
   const partTwo = SESSIONS.filter(s => s.part === 2);
 
-  const mapItem = s => h('a.map__item', {
-    href: `#/s/${s.id}`,
-    data: {
-      current: String(s.n === state.cls.session),
-      done: String(s.n < state.cls.session),
-    },
-  }, [
-    h('span.map__n', { text: String(s.n).padStart(2, '0') }),
-    h('.map__body', [
-      h('span.map__title', { text: L(s.title) }),
-      h('span.map__sub', { text: L(s.sub) }),
-    ]),
-    h('span.map__meta', { text: `${s.mins} ${t('minutes')}` }),
-  ]);
+  const mapItem = s => {
+    const clear = unlocked(s.id);
+    const puz = PUZZLES[s.id];
+    return h('a.map__item', {
+      href: `#/s/${s.id}`,
+      data: {
+        current: String(s.n === state.cls.session),
+        done: String(clear),
+      },
+    }, [
+      h('span.map__n', { text: puz ? puz.caseNo : String(s.n).padStart(2, '0') }),
+      h('.map__body', [
+        h('span.map__title', { text: L(s.title) }),
+        h('span.map__sub', { text: L(s.sub) }),
+      ]),
+      h('span.map__meta', { text: clear ? (zh ? '已破關 ✓' : 'CLEARED ✓') : `${s.mins} ${t('minutes')}` }),
+    ]);
+  };
 
   const map = h('section.wrap--wide.section.stack-lg', [
     h('.stack', [

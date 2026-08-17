@@ -3,8 +3,11 @@
    這是教學模型，不是水文推估：流量以相對比例呈現，
    目的是讓「取走多少、下游剩多少」看得見，不是預測真實流量。
    ============================================================ */
-import { h, clear, eyebrow, throttle } from '../../ui.js';
+import { h, clear, eyebrow, throttle, toast, field, debounce } from '../../ui.js';
 import { L, t, getLang } from '../../i18n.js';
+import { addNote, saveWork, myWork, allWork, subscribe, state } from '../../store.js';
+import { speak } from '../../agent.js';
+import { SLOTS } from '../../../data/personas.js';
 
 const NS = 'http://www.w3.org/2000/svg';
 
@@ -88,6 +91,137 @@ export default function flow(root) {
         : 'At 0% the park and your home get nothing. At 100% the river below gets nothing. The course asks where the line between them belongs, and who gets to draw it.' }),
     ]),
   ]));
+
+  /* ============================================================
+     模擬完不是就結束了。這組數字要能拿去吵架、拿去問人、跟全班比。
+     ============================================================ */
+  const bridge = h('section.wrap--wide.section--tight.stack');
+  root.append(bridge);
+
+  /** 目前設定的一句話描述，貼到畫布與問 agent 都用它 */
+  const describe = () => zh
+    ? `我把取水設成 ${Math.round(ratio * 100)}%：下游剩 ${fmt(m.down)} 份，灌溉 ${fmt(m.irrigation)}／${m.irrigationNeed}，園區 ${fmt(m.park)}／${m.parkNeed}，${m.fish ? '魚還上得去' : '魚上不去'}。`
+    : `I set diversion to ${Math.round(ratio * 100)}%: ${fmt(m.down)} left downstream, irrigation ${fmt(m.irrigation)}/${m.irrigationNeed}, park ${fmt(m.park)}/${m.parkNeed}, fish ${m.fish ? 'can' : 'cannot'} pass.`;
+
+  const reason = h('textarea.textarea', {
+    placeholder: zh ? '我為什麼把線畫在這裡……' : 'Why I drew the line here...',
+  });
+
+  /* ---- 問未在場者 ---- */
+  const askable = SLOTS.filter(x => ['river', 'farmers'].includes(x.id));
+  const chat = h('.chat', { style: { maxHeight: '220px' } });
+
+  const askSlot = async slot => {
+    chat.append(h('.bubble.bubble--me', { text: describe() }));
+    const wait = h('.bubble.bubble--agent', [h('.typing', [h('span'), h('span'), h('span')])]);
+    chat.append(wait); chat.scrollTop = chat.scrollHeight;
+    const { text } = await speak(slot.id, '', [], m);
+    wait.remove();
+    chat.append(h('.bubble.bubble--agent', [
+      h('p', { style: { margin: 0 }, text: text }),
+      h('p', { style: { margin: '4px 0 0', fontSize: '10px', opacity: .7, fontStyle: 'italic' },
+               text: L(slot.who) }),
+    ]));
+    chat.scrollTop = chat.scrollHeight;
+  };
+
+  /* ---- 全班的設定 ---- */
+  const classBox = h('.stack-sm');
+  const paintClass = () => {
+    clear(classBox);
+    const rows = allWork('sim-flow').filter(w => typeof w.ratio === 'number');
+    if (!rows.length) {
+      classBox.append(h('p.muted', { style: { fontSize: 'var(--t-sm)' },
+        text: zh ? '還沒有人存設定。存一組上來，才比得出誰把線畫在哪裡。' : 'No settings saved yet.' }));
+      return;
+    }
+    // 分佈：每 10% 一格
+    const bins = Array(10).fill(0);
+    rows.forEach(w => { bins[Math.min(9, Math.floor(w.ratio * 10))]++; });
+    const max = Math.max(...bins);
+    classBox.append(
+      h('.row', { style: { alignItems: 'flex-end', gap: '4px', height: '84px' } },
+        bins.map((n, k) => h('div', { style: { flex: '1', display: 'grid', gap: '4px', alignContent: 'end' } }, [
+          h('div', {
+            style: {
+              height: (n ? 12 + (n / max) * 58 : 2) + 'px',
+              background: n ? 'linear-gradient(180deg, var(--water-lit), var(--water-dim))' : 'var(--rule)',
+              borderRadius: '2px',
+            },
+            title: `${k * 10}–${k * 10 + 10}%：${n}`,
+          }),
+          h('p.mono', { style: { margin: 0, fontSize: '9px', color: 'var(--fg-3)', textAlign: 'center' },
+                        text: String(k * 10) }),
+        ]))),
+      h('p.muted', { style: { fontSize: 'var(--t-xs)', margin: 0 },
+        text: zh ? `${rows.length} 組設定・橫軸是取水比例` : `${rows.length} settings · x-axis is diversion ratio` }),
+      h('.stack-sm', rows.slice(-6).reverse().map(w => h('.card', { style: { padding: 'var(--s3)' } }, [
+        h('.row.row--between', [
+          h('span.mono', { style: { color: 'var(--clay-lit)', fontSize: 'var(--t-sm)' }, text: Math.round(w.ratio * 100) + '%' }),
+          h('span.muted', { style: { fontSize: 'var(--t-xs)' }, text: `${w.name || (zh ? '匿名' : 'anon')}${w.group ? '・' + w.group : ''}` }),
+        ]),
+        w.reason ? h('p', { style: { margin: 0, fontSize: 'var(--t-sm)' }, text: w.reason }) : null,
+      ].filter(Boolean)))),
+    );
+  };
+
+  bridge.append(
+    eyebrow(zh ? '用這組數字做點事' : 'DO SOMETHING WITH THIS'),
+    h('.cols-2', [
+      /* 左：存下來、貼上畫布 */
+      h('.paper.stack', [
+        h('p.task__id', { text: zh ? '把你的線交出來' : 'HAND IN YOUR LINE' }),
+        h('p', { style: { margin: 0, fontSize: 'var(--t-sm)' }, text: zh
+          ? '拉到你覺得說得過去的位置，寫下理由。存下來之後，全班就看得到你把線畫在哪。'
+          : 'Set it where you can defend, then say why. Once saved, the class can see where you drew the line.' }),
+        field(zh ? '理由' : 'Why', reason),
+        h('.row', [
+          h('button.btn.btn--primary', {
+            type: 'button',
+            onclick: () => {
+              saveWork('sim-flow', { ratio, reason: reason.value, readout: describe() });
+              toast(zh ? '存好了，全班看得到' : 'Saved for the class');
+              paintClass();
+            },
+          }, zh ? '存下設定' : 'Save setting'),
+          h('button.btn', {
+            type: 'button',
+            onclick: () => {
+              if (!reason.value.trim()) { toast(zh ? '先寫理由，不然畫布上只有數字' : 'Write your reason first'); return; }
+              addNote({
+                who: zh ? '我的取水方案' : 'My diversion plan',
+                cares: zh ? '取水比例' : 'DIVERSION',
+                body: describe() + ' ' + reason.value.trim(),
+                side: 'for',
+              });
+              toast(t('posted'));
+            },
+          }, zh ? '貼到觀點畫布' : 'Post to the canvas'),
+        ]),
+      ]),
+
+      /* 右：拿這組數字去問人 */
+      h('.card.stack-sm', [
+        h('p.card__title', { text: zh ? '拿這組數字去問他們' : 'Ask them about this setting' }),
+        h('p.muted', { style: { margin: 0, fontSize: 'var(--t-sm)' }, text: zh
+          ? '他們只會講這組數字會讓自己變成什麼樣，不會說你對或錯。'
+          : 'They will only say what this setting does to them. They will not say you are right or wrong.' }),
+        h('.row.row--tight', askable.map(slot => h('button.btn.btn--sm', {
+          type: 'button', onclick: () => askSlot(slot),
+        }, L(slot.who)))),
+        chat,
+      ]),
+    ]),
+
+    /* 全班 */
+    h('.card.stack-sm', [
+      h('p.card__title', { text: zh ? '全班把線畫在哪裡' : 'Where the class drew the line' }),
+      classBox,
+    ]),
+  );
+
+  paintClass();
+  const offClass = subscribe(w => { if (w === 'work') paintClass(); });
 
   /* ---------- 計算 ---------- */
   function model(r) {
@@ -333,6 +467,12 @@ export default function flow(root) {
   range.addEventListener('input', throttle(e => { ratio = e.target.value / 100; update(); }, 40));
 
   /* ---------- 啟動 ---------- */
+  const saved = myWork('sim-flow');
+  if (saved && typeof saved.ratio === 'number') {
+    ratio = saved.ratio;
+    range.value = String(Math.round(ratio * 100));
+    if (saved.reason) reason.value = saved.reason;
+  }
   buildSvg();
   requestAnimationFrame(() => {
     measure(); seed(); resize(); update(); tick();
@@ -343,5 +483,6 @@ export default function flow(root) {
   return () => {
     cancelAnimationFrame(raf);
     window.removeEventListener('resize', onResize);
+    offClass();
   };
 }
