@@ -481,7 +481,12 @@ function talkBox(qid, question, zh, offs) {
         h('span.mono', { style: { fontSize: 'var(--t-micro)', color: 'var(--fg-3)' },
                          text: `${new Set(rows.map(r => r.by)).size} ${zh ? '人' : ''}` }),
       ]),
-      cloudEl(h, countWordsIn(rows.map(r => r.text), 26), { max: 40, min: 12 }),
+      cloudEl(h, countWordsIn(rows.map(r => r.text), 26), {
+        max: 40, min: 12,
+        empty: rows.length
+          ? (zh ? '還沒有重複出現的詞。再多幾則就看得出來了。' : 'No repeated words yet.')
+          : (zh ? '還沒有人留下想法' : 'No thoughts yet'),
+      }),
     );
     if (rows.length < 3) {
       cloudWrap.append(h('p.talk__empty', { text: zh

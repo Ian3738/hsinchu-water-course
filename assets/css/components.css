@@ -1058,3 +1058,13 @@ body:has(.deck) .footer { display: none; }
   align-content: center;
 }
 @media (max-width: 720px) { .home-hero { min-height: calc(100dvh - 130px); } }
+
+/* 入班失敗的原因要留在畫面上，不能用一閃就消失的提示 */
+.joinerr {
+  margin: 0;
+  font-size: var(--t-sm);
+  color: #B3401C;
+  font-weight: 600;
+  min-height: 1px;
+}
+.joinerr:empty { display: none; }

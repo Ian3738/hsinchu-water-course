@@ -26,6 +26,28 @@ const STOP_EN = new Set([
   'will', 'just', 'like', 'only', 'also', 'very', 'your', 'these', 'those', '我', 'i',
 ]);
 
+/* ------------------------------------------------------------
+   課程詞彙表
+   沒有詞庫的話，「跨則重複」是判斷一個字串是不是詞的唯一訊號，
+   所以留言只有一兩則時算不出東西。這張表補上那個缺口：
+   這些是這門課本來就在談的詞，出現一次就值得標出來。
+   ------------------------------------------------------------ */
+const LEXICON = [
+  // 地方與設施
+  '頭前溪','上坪溪','霄裡溪','中港溪','竹東大圳','寶山水庫','寶二水庫','攔河堰',
+  '分水嶺','水庫','水圳','渠道','新埔','竹東','寶山','科學園區','園區','石門水庫',
+  // 水與環境
+  '取水','引水','放流','廢水','排放','流量','下游','上游','枯水期','地下水','含水層',
+  '灌溉','農田','稻田','水質','井水','自來水','飲用水','回收水','跨流域','集水區',
+  '生態','魚','棲地','河床','溪水','雨水',
+  // 人與立場
+  '農民','居民','住戶','原住民','工程師','政府','廠商','工廠','面板廠','官員',
+  '未出生','後代','子孫','遷居','搬走','徵收','補償','土地','受影響',
+  // 這門課的概念
+  '公平','不公平','決定','參與','發言','代言','不在場','沒有被問','有沒有問',
+  '借水','還水','代價','犧牲','取捨','優先','需求','分配','水權','責任',
+];
+
 const isCJK = c => /[㐀-鿿]/.test(c);
 
 /* 這些字放在詞頭或詞尾，幾乎一定是切錯了。
@@ -39,8 +61,23 @@ const edgeOk = w => !EDGE_BAD.has(w[0]) && !EDGE_BAD.has(w[w.length - 1]);
  * 從一堆句子算出詞頻。
  * @param {string[]} texts
  * @param {number} top 取前幾名
+ *
+ * 門檻是動態的：留言還少的時候要求「出現兩次」會整片空白，
+ * 所以三則以內就讓出現一次的詞也算，只是優先留長一點的詞。
  */
 export function countWordsIn(texts, top = 40) {
+  const live = texts.filter(t => String(t || '').trim());
+
+  // 先掃課程詞彙表。這些詞出現一次就算數，所以第一則留言進來就有東西看。
+  const lex = scanLexicon(live);
+
+  // 留言還少的時候，跨則重複的訊號不夠，就只用詞彙表的結果。
+  if (live.length < 4) {
+    return [...lex.entries()]
+      .sort((a, b) => b[1] - a[1] || b[0].length - a[0].length)
+      .slice(0, top)
+      .map(([text, n]) => ({ text, n }));
+  }
   const freq = new Map();
   const bump = (w, n = 1) => freq.set(w, (freq.get(w) || 0) + n);
 
@@ -67,6 +104,9 @@ export function countWordsIn(texts, top = 40) {
     });
   });
 
+  // 詞彙表命中的詞加權併入：它們是這門課的關鍵詞，不該被一般片段蓋過
+  lex.forEach((n, w) => freq.set(w, (freq.get(w) || 0) + n * 1.6));
+
   // 被更長且幾乎一樣頻繁的詞包住的碎片，丟掉
   const rows = [...freq.entries()].sort((a, b) => b[1] - a[1]);
   const kept = [];
@@ -83,9 +123,31 @@ export function countWordsIn(texts, top = 40) {
   }
 
   return kept
-    .filter(([w, n]) => n >= (isCJK(w[0]) ? 2 : 2))
+    .filter(([w, n]) => n >= 2)
     .slice(0, top)
     .map(([text, n]) => ({ text, n }));
+}
+
+/* 掃課程詞彙表。長的詞先比，比中就跳過那一段，不會重疊。 */
+function scanLexicon(texts) {
+  const terms = [...LEXICON].sort((a, b) => b.length - a.length);
+  const freq = new Map();
+  texts.forEach(raw => {
+    let t = String(raw || '');
+    terms.forEach(w => {
+      let n = 0, i;
+      while ((i = t.indexOf(w)) !== -1) {
+        n++;
+        t = t.slice(0, i) + '\u0000'.repeat(w.length) + t.slice(i + w.length);
+      }
+      if (n) freq.set(w, (freq.get(w) || 0) + n);
+    });
+    // 剩下的英文照舊
+    t.toLowerCase().split(/[^a-z0-9]+/).forEach(w => {
+      if (w.length >= 3 && !STOP_EN.has(w)) freq.set(w, (freq.get(w) || 0) + 1);
+    });
+  });
+  return freq;
 }
 
 /**
@@ -93,10 +155,10 @@ export function countWordsIn(texts, top = 40) {
  * 不做螺旋排版——投影時字會互相蓋到很難讀。
  * 用置中的流式排列，大小與顏色反映頻率，一眼看得出重心在哪。
  */
-export function cloudEl(h, words, { max = 64, min = 14 } = {}) {
+export function cloudEl(h, words, { max = 64, min = 14, empty = '還沒有人留下想法' } = {}) {
   const box = h('.cloud');
   if (!words.length) {
-    box.append(h('p.cloud__empty', { text: '還沒有人留下想法' }));
+    box.append(h('p.cloud__empty', { text: empty }));
     return box;
   }
   const hi = words[0].n;

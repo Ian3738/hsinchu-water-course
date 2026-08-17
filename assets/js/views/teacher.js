@@ -129,7 +129,11 @@ export default function teacher(root) {
 
     /* 文字雲 */
     const words = countWordsIn(rows.map(r => r.text), 44);
-    wall.append(cloudEl(h, words));
+    wall.append(cloudEl(h, words, {
+      empty: rows.length
+        ? (zh ? '還沒有重複出現的詞。再多幾則就看得出來了。' : 'No repeated words yet.')
+        : (zh ? '學生還沒開始留想法' : 'No thoughts yet'),
+    }));
     if (words.length) {
       wall.append(h('p.note-line', {
         text: zh

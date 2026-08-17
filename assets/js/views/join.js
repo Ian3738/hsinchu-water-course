@@ -1,7 +1,7 @@
 /* 入班：掃 QR 或輸入班級代碼 */
 import { h, clear, eyebrow, field, toast } from '../ui.js';
 import { getLang } from '../i18n.js';
-import { auth, signIn, joinClass, signedIn } from '../auth.js';
+import { auth, signIn, joinClass, signedIn, explain } from '../auth.js';
 import { setClass } from '../store.js';
 
 export default function join(root, { params }) {
@@ -43,9 +43,14 @@ export default function join(root, { params }) {
             type: 'button',
             onclick: async () => {
               try { await signIn(); }
-              catch (e) { toast((zh ? '登入失敗：' : 'Sign-in failed: ') + (e.message || e)); }
+              catch (e) {
+                const box = document.querySelector('.joinerr-signin');
+                if (box) box.textContent = (zh ? '登入失敗：' : 'Sign-in failed: ') + explain(e);
+                console.warn('signIn 失敗', e);
+              }
             },
           }, zh ? '用 Google 登入' : 'Sign in with Google'),
+          h('p.joinerr.joinerr-signin'),
           h('p.note-line', { text: zh
             ? '我們只會拿到你的名字、信箱和大頭貼，不會碰你的信件或雲端硬碟。'
             : 'We only receive your name, email and avatar. Nothing else.' }),
@@ -69,17 +74,21 @@ export default function join(root, { params }) {
     }
 
     const input = h('input.input', { value: code, placeholder: zh ? '班級代碼' : 'Class code' });
+    const err = h('p.joinerr');
     const go = async () => {
       const c = input.value.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
-      if (!c) { toast(zh ? '請輸入班級代碼' : 'Enter a class code'); return; }
+      err.textContent = '';
+      if (!c) { err.textContent = zh ? '請輸入班級代碼' : 'Enter a class code'; return; }
       try {
         const cls = await joinClass(c);
         setClass({ code: c, session: cls.session }, { broadcast: false });
         toast(zh ? `加入「${cls.name || c}」了` : `Joined ${cls.name || c}`);
+        // 不整頁重載：auth.classes 已經更新，直接進課程就好
         location.hash = '#/';
-        location.reload();
       } catch (e) {
-        toast(e.message || String(e));
+        // 失敗原因留在畫面上，不要用一閃就消失的提示
+        err.textContent = (zh ? '進不去：' : 'Could not join: ') + explain(e);
+        console.warn('joinClass 失敗', e);
       }
     };
     input.addEventListener('keydown', e => { if (e.key === 'Enter') go(); });
@@ -88,6 +97,7 @@ export default function join(root, { params }) {
       h('p.task__id', { text: zh ? '你好，' + (auth.user.name || '') : 'Hello, ' + (auth.user.name || '') }),
       h('h2.task__title', { text: zh ? '輸入老師給的班級代碼' : "Enter the class code your teacher gave you" }),
       field(zh ? '班級代碼' : 'Class code', input, zh ? '例：703a' : 'e.g. 703a'),
+      err,
       h('.row', [
         h('button.btn.btn--primary', { type: 'button', onclick: go }, zh ? '加入' : 'Join'),
         h('a.btn.btn--ghost', { href: '#/' }, zh ? '先看看課程' : 'Just browse'),

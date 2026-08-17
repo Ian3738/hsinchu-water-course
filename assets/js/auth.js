@@ -32,8 +32,15 @@ function emit() { listeners.forEach(fn => fn(auth)); }
 
 /* ---------- 啟動 ---------- */
 export async function initAuth() {
-  const cfg = CONFIG.firebase;
-  if (!cfg || !cfg.apiKey) { auth.ready = true; emit(); return auth; }
+  const base = CONFIG.firebase;
+  if (!base || !base.apiKey) { auth.ready = true; emit(); return auth; }
+
+  /* Safari 從 16.1 起做儲存分區，跨網域的登入轉址會拿不回結果。
+     站台開在 Firebase Hosting 上時，把 authDomain 指到同一個網域，
+     iPhone 才登得進去。GitHub Pages 上維持預設。 */
+  const host = location.hostname;
+  const sameOrigin = /\.(web\.app|firebaseapp\.com)$/.test(host);
+  const cfg = sameOrigin ? { ...base, authDomain: host } : base;
 
   try {
     const [appMod, authMod, dbMod] = await Promise.all([
@@ -105,16 +112,32 @@ export async function initAuth() {
 }
 
 /* ---------- 登入 / 登出 ---------- */
+const ERRORS = {
+  'auth/unauthorized-domain': '這個網址沒有被授權登入。請用老師給的網址。',
+  'auth/operation-not-allowed': 'Google 登入還沒啟用。請聯絡老師。',
+  'auth/popup-blocked': '瀏覽器擋住了登入視窗，正在改用整頁跳轉。',
+  'auth/popup-closed-by-user': '登入視窗被關掉了，再試一次。',
+  'auth/cancelled-popup-request': '重複點了，再按一次就好。',
+  'auth/network-request-failed': '連不上網路，檢查一下 Wi-Fi。',
+  'auth/web-storage-unsupported': '這個瀏覽器擋住了儲存空間。請關掉無痕模式再試。',
+};
+
+export function explain(e) {
+  const code = e?.code || '';
+  return ERRORS[code] || (e?.message || String(e));
+}
+
 export async function signIn() {
   if (!fb) throw new Error('登入服務沒啟動');
   const { authMod, auth: a } = fb;
   const provider = new authMod.GoogleAuthProvider();
   provider.setCustomParameters({ prompt: 'select_account' });
   try {
+    // 一定要在使用者點擊的當下直接呼叫，中間不能有 await，不然 iOS 會擋
     await authMod.signInWithPopup(a, provider);
   } catch (e) {
-    // 手機或被擋 popup 時改用轉址
-    if (/popup|blocked|cancelled|closed/i.test(e.code || e.message || '')) {
+    const code = e.code || '';
+    if (/popup|blocked|cancelled|closed|web-storage/i.test(code)) {
       await authMod.signInWithRedirect(a, provider);
       return;
     }
